@@ -9,6 +9,7 @@ import (
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
+// MultiLang 优先注册中间件，以免未达中间件lang为空
 func MultiLang(r *ghttp.Request) {
 	langArr := gstr.Explode(",", r.Header.Get("Accept-Language"))
 	lang := "zh-CN" // 默认中文
