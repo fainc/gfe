@@ -13,8 +13,8 @@ import (
 	"github.com/gogf/gf/v2/util/gmeta"
 )
 
-// HandlerResponse 默认数据返回中间件
-func HandlerResponse(r *ghttp.Request) {
+// Handler 默认数据返回中间件
+func Handler(r *ghttp.Request) {
 	var (
 		ctx  = r.Context()
 		err  = r.GetError()
