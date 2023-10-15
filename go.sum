@@ -11,10 +11,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1mIlRU8Am5FuJP05cCM98=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
-github.com/fainc/go-crypto v0.0.1 h1:Vcq4XSGEKd9DAyYZrviR9YedPDV5ubxjzmvxBbG3Rss=
-github.com/fainc/go-crypto v0.0.1/go.mod h1:QlRYxOZXwkGle0FtOS6OVQK1cTrvLzNx0u5YB3p2Qbs=
-github.com/fainc/gojwt v0.0.1 h1:52Rx8VMYMK0msRmoSA/BrMsb7T0jjXiwo4816+n+MzU=
-github.com/fainc/gojwt v0.0.1/go.mod h1:Pdm/eFlQSGsgBjFAUtGbXiNLRo7g2D+GwkKGwmHesj8=
+github.com/fainc/go-crypto v0.0.4 h1:jpCNg240Cj98KG6sA4uQF2bwDbFPN4LOgNGid3ThMdo=
+github.com/fainc/go-crypto v0.0.4/go.mod h1:QlRYxOZXwkGle0FtOS6OVQK1cTrvLzNx0u5YB3p2Qbs=
+github.com/fainc/gojwt v0.0.4 h1:DsqM3GN3j8Of3TuI1iRQyoZf4kJJhVaHZgz7zBfnpkw=
+github.com/fainc/gojwt v0.0.4/go.mod h1:RsvLlrb3drr/sdsAfpVqDeDp0jYcZZPQVG9km/IXMM4=
 github.com/fatih/color v1.15.0 h1:kOqh6YHBtK8aywxGerMG2Eq3H6Qgoqeo13Bk2Mv/nBs=
 github.com/fatih/color v1.15.0/go.mod h1:0h5ZqXfHYED7Bhv2ZJamyIOUej9KtShiJESRwBDUSsw=
 github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4HY=

@@ -3,8 +3,8 @@ module github.com/fainc/gfe
 go 1.18
 
 require (
-	github.com/fainc/go-crypto v0.0.1
-	github.com/fainc/gojwt v0.0.1
+	github.com/fainc/go-crypto v0.0.4
+	github.com/fainc/gojwt v0.0.4
 	github.com/gogf/gf/v2 v2.5.4
 )
 

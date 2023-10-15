@@ -3,140 +3,69 @@ package response
 import (
 	"net/http"
 
-	"github.com/fainc/go-crypto/gm"
-	"github.com/fainc/go-crypto/rsa"
-	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gmeta"
 )
 
-// Handler 默认数据返回中间件
-func Handler(r *ghttp.Request) {
+func Handler(r *ghttp.Request, defaultMime string) {
 	var (
 		ctx  = r.Context()
 		err  = r.GetError()
 		res  = r.GetHandlerResponse()
 		code = gerror.Code(err)
+		mime = gmeta.Get(res, "mime").String()
 	)
-
-	// openapi
-	if gstr.Contains(r.RequestURI, "api.json") {
+	// openapi/已退出程序流程/下载任务
+	if r.IsExited() || gstr.Contains(r.RequestURI, "api.json") || r.Response.Writer.Header().Get("Content-Type") == "application/force-download" {
 		return
 	}
-
+	// 声明meta为自定义输出时，不走当前中间件
+	if mime == "custom" {
+		setServerHeader(r)
+		return
+	}
+	if mime == "" { // 无指定，使用默认mime
+		mime = defaultMime
+	}
+	f := Format(FormatOptions{Mime: mime})
 	// 已有err错误
 	if err != nil {
-		if code.Code() == 50 || code.Code() == 52 || code.Code() == 500 { // 服务器错误
-			Json().InternalError(ctx, g.I18n().Translate(ctx, "InternalError"))
+		// -1:未定义错误code的error；>=1000 自定义错误码error；51:参数验证错误
+		if code.Code() == -1 || code.Code() >= 1000 || code.Code() == 51 {
+			f.Error(ctx, code.Code(), err.Error(), code.Detail())
 			return
 		}
-		if code.Code() == 401 { // 登录
-			Json().UnAuthorizedError(ctx, code.Message(), code.Detail())
+		// 4XX 常用error，同步http code；
+		if code.Code() >= 400 && code.Code() < 500 {
+			f.errorSyncHTTPStatus(ctx, code.Code(), err.Error(), code.Detail())
 			return
 		}
-		if code.Code() == 402 { // 解密
-			Json().DecryptError(ctx, code.Message(), code.Detail())
-			return
-		}
-		if code.Code() == 403 { // 签名
-			Json().SignatureError(ctx, code.Message(), code.Detail())
-			return
-		}
-		if code.Code() == 404 { // 404
-			Json().NotFoundError(ctx, code.Message())
-			return
-		}
-		Json().Error(ctx, err.Error(), code.Code(), code.Detail()) // 常规错误
+		// 其它错误
+		f.InternalError(ctx, nil)
 		return
 	}
-	// 已退出程序流程，不走当前中间件
-	if r.IsExited() {
-		return
-	}
-
-	// 自定义输出
-	if gmeta.Get(res, "mime").String() == "custom" {
-		return
-	}
-
-	// 状态码正常且已有buffer内容
-	if r.Response.Status == http.StatusOK && r.Response.BufferLength() > 0 {
-		return
-	}
-
-	// 已有异常响应状态码
+	// 无错误但有响应状态码
 	if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
 		switch r.Response.Status {
 		case http.StatusNotFound: // 404
-			Json().NotFoundError(ctx, g.I18n().Translate(ctx, "NotFound"))
+			f.NotFound(ctx, nil)
 			return
-		case http.StatusUnauthorized: // 401
-			return
-		case http.StatusBadRequest: // 400
-			return
-		default:
-			Json().InternalError(ctx, g.I18n().Translate(ctx, "InternalError"))
+		default: // 未知的错误状态码
+			f.InternalError(ctx, "unsupported http status code")
 			return
 		}
 	}
-
-	/*CTX判断是否加密 etc.*/
-	// r.SetCtxVar("response_encrypt", true)
-	// r.SetCtxVar("response_encrypt_algorithm", cert.Algorithm)
-	// r.SetCtxVar("response_encrypt_key", cert.Public)
-	// r.SetCtxVar("response_encrypt_hex", true)
-	var (
-		encrypt = r.GetCtxVar("response_encrypt", false).Bool()
-	)
-	if !encrypt || res == nil { // CTX声明不加密或空数据时不处理加密，直接返回
-		Json().Success(ctx, res)
+	var result interface{}
+	f.encrypted, result, err = tryEncrypt(r, mime, res)
+	if err != nil {
+		r.SetError(CodeError(500, err.Error(), nil))
+		f.InternalError(ctx, err.Error())
 		return
 	}
-	var (
-		encryptAlgorithm = r.GetCtxVar("response_encrypt_algorithm", "").String()
-	)
-	if encrypt && encryptAlgorithm == "" { // CTX加密算法为空
-		Json().InternalError(ctx, g.I18n().Translate(ctx, "UnsupportedEncryptAlgorithm"))
-		return
+	if mime == "HTML" {
+		f.staticTpl = gmeta.Get(res, "x-static-tpl").String() // 从meta读取静态视图
 	}
-	var (
-		encryptKey     = r.GetCtxVar("response_encrypt_key", "").String()
-		encryptHex     = r.GetCtxVar("response_encrypt_hex", false).Bool() // 是否使用hex，否则输出base64
-		encryptSM2Mode = r.GetCtxVar("response_encrypt_sm2_mode", 0).Int()
-		encryptSM4Mode = r.GetCtxVar("response_encrypt_sm4_mode", "ECB").String()
-	)
-	if encryptKey == "" { // CTX加密密钥/证书为空
-		Json().InternalError(ctx, g.I18n().Translate(ctx, "EncryptKeyError"))
-		return
-	}
-	switch encryptAlgorithm {
-	case "SM2":
-		res, err = gm.Sm2().Encrypt(encryptKey, gjson.MustEncodeString(res), encryptHex, encryptSM2Mode)
-		if err != nil {
-			Json().InternalError(ctx, g.I18n().Translate(ctx, "DataEncryptFailed"))
-			return
-		}
-	case "SM4":
-		res, err = gm.Sm4().Encrypt(encryptSM4Mode, encryptKey, gjson.MustEncodeString(res), encryptHex)
-		if err != nil {
-			Json().InternalError(ctx, g.I18n().Translate(ctx, "DataEncryptFailed"))
-			return
-		}
-	case "RSA_PKCS1":
-		res, err = rsa.Encrypt(gjson.MustEncodeString(res), encryptKey, encryptHex)
-		if err != nil {
-			Json().InternalError(ctx, g.I18n().Translate(ctx, "DataEncryptFailed"))
-			return
-		}
-	default:
-		Json().InternalError(ctx, g.I18n().Translate(ctx, "UnsupportedEncryptAlgorithm"))
-		return
-	}
-	Json(JsonOptions{
-		Encrypt:          encrypt,
-		EncryptAlgorithm: encryptAlgorithm,
-	}).Success(ctx, res)
+	f.Success(ctx, result)
 }

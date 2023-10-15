@@ -2,11 +2,8 @@
 NotFound = "请求的资源不存在"
 UnAuthorized = "请先登录"
 InternalError = "内部服务器错误"
-DecryptFailed = "数据解密失败"
-SignatureError = "签名错误"
-DataEncryptFailed = "数据加密失败"
-UnsupportedEncryptAlgorithm = "不受支持的加密算法"
-EncryptKeyError = "加密密钥/证书错误"
+Forbidden = "没有访问权限"
+SignatureError = "签名验证失败"
 
 #数据校验模块 i18n中文定义，如需使用请复制到您的gf i18n配置中
 "gf.gvalid.rule.required"             = "{attribute}字段不能为空"

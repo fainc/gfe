@@ -6,23 +6,16 @@ import (
 	"github.com/gogf/gf/v2/i18n/gi18n"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/text/gstr"
-	"github.com/gogf/gf/v2/util/gconv"
 )
 
-// MultiLang 优先注册中间件，以免未达中间件lang为空
+// MultiLang 优先注册中间件，以免lang为空
 func MultiLang(r *ghttp.Request) {
-	langArr := gstr.Explode(",", r.Header.Get("Accept-Language"))
-	lang := "zh-CN" // 默认中文
-	// languages:
-	//  - zh-CN
-	//  - en
-	//  - jp
-	languages, _ := g.Cfg().Get(r.Context(), "languages", garray.Array{}) // 从配置中读取
-
-	langList := garray.NewStrArrayFrom(gconv.Strings(languages))
-	if langArr != nil && langArr[0] != "" && langList.Contains(langArr[0]) {
-		lang = langArr[0]
+	clientLang := gstr.Explode(",", r.Header.Get("Accept-Language"))
+	serverLang := "en" // 默认
+	supportLang := garray.NewArrayFrom(g.Cfg().MustGet(r.Context(), "language").Array(), true)
+	if len(clientLang) != 0 && clientLang[0] != "" && supportLang.Contains(clientLang[0]) {
+		serverLang = clientLang[0]
 	}
-	r.SetCtx(gi18n.WithLanguage(r.Context(), lang))
+	r.SetCtx(gi18n.WithLanguage(r.Context(), serverLang))
 	r.Middleware.Next()
 }
