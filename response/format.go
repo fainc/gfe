@@ -61,6 +61,9 @@ func (rec *format) Forbidden(ctx context.Context, ext interface{}) {
 func (rec *format) NotFound(ctx context.Context, ext interface{}) {
 	rec.errorSyncHTTPStatus(ctx, 404, gi18n.Translate(ctx, "NotFound"), ext)
 }
+func (rec *format) MethodNotAllowed(ctx context.Context, ext interface{}) {
+	rec.errorSyncHTTPStatus(ctx, 405, gi18n.Translate(ctx, "MethodNotAllowed"), ext)
+}
 func (rec *format) InternalError(ctx context.Context, ext interface{}) {
 	rec.errorSyncHTTPStatus(ctx, 500, gi18n.Translate(ctx, "InternalError"), ext)
 }

@@ -17,8 +17,8 @@ func Handler(r *ghttp.Request, defaultMime string) {
 		code = gerror.Code(err)
 		mime = gmeta.Get(res, "mime").String()
 	)
-	// openapi/已退出程序流程/下载任务
-	if r.IsExited() || gstr.Contains(r.RequestURI, "api.json") || r.Response.Writer.Header().Get("Content-Type") == "application/force-download" {
+	// openapi/pprof/已退出程序流程/下载任务
+	if r.IsExited() || gstr.Contains(r.RequestURI, "api.json") || gstr.Contains(r.RequestURI, "/pprof/") || r.Response.Writer.Header().Get("Content-Type") == "application/force-download" {
 		return
 	}
 	// 声明meta为自定义输出时，不走当前中间件
@@ -51,6 +51,9 @@ func Handler(r *ghttp.Request, defaultMime string) {
 		switch r.Response.Status {
 		case http.StatusNotFound: // 404
 			f.NotFound(ctx, nil)
+			return
+		case http.StatusMethodNotAllowed: // 405
+			f.MethodNotAllowed(ctx, nil)
 			return
 		default: // 未知的错误状态码
 			f.InternalError(ctx, "unsupported http status code")

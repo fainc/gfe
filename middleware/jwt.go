@@ -116,7 +116,7 @@ func (rec *jwt) parser(r *ghttp.Request, cfg jwtConfig, whiteTables g.SliceStr) 
 	var revoked = false
 	if err == nil && cfg.Redis != "" {
 		if revoked, err = rec.IsRedisRevoked(cfg.Redis, c.ID); err != nil {
-			panic(err)
+			panic(err.Error())
 		}
 	}
 	if err != nil || revoked {
