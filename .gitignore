@@ -26,4 +26,4 @@ bin
 /main.go
 /Makefile
 /logs/
-/instance/
+/test_instance/
