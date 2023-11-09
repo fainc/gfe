@@ -3,10 +3,9 @@ module github.com/fainc/gfe
 go 1.18
 
 require (
-	github.com/fainc/go-crypto v0.0.4
-	github.com/fainc/gojwt v0.0.4
-	github.com/gogf/gf/contrib/nosql/redis/v2 v2.5.4
-	github.com/gogf/gf/v2 v2.5.4
+	github.com/fainc/gojwt v0.0.8
+	github.com/gogf/gf/contrib/nosql/redis/v2 v2.5.6
+	github.com/gogf/gf/v2 v2.5.6
 )
 
 require (
@@ -30,13 +29,11 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/redis/go-redis/v9 v9.0.5 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
-	github.com/tjfoc/gmsm v1.4.1 // indirect
 	go.opentelemetry.io/otel v1.14.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.14.0 // indirect
 	go.opentelemetry.io/otel/trace v1.14.0 // indirect
-	golang.org/x/crypto v0.13.0 // indirect
-	golang.org/x/net v0.12.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

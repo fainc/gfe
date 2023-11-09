@@ -7,11 +7,12 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
-	"github.com/gogf/gf/v2/os/gcfg"
+	"github.com/gogf/gf/v2/os/gcfg" //nolint:typecheck
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/genv"
 	"github.com/gogf/gf/v2/os/gtime"
 
+	"github.com/fainc/gfe/helper"
 	"github.com/fainc/gfe/util"
 )
 
@@ -75,7 +76,7 @@ func (rec *logger) Register(r *ghttp.Request) {
 		for _, key := range rec.AccessHeaderKey {
 			header.Set(key, r.GetHeader(key))
 		}
-		jwtInfo := Jwt().GetCtxUser(r.Context())
+		jwtInfo := helper.Ctx(r.Context()).GetUser()
 		logData := g.Map{"jwt": jwtInfo, "header": header, "remoteAddr": r.Request.RemoteAddr, "referer": referer, "traceId": traceID, "method": r.Response.Request.Method, "code": r.Response.Status, "uri": r.Request.RequestURI, "contentType": ct, "UA": ua, "body": bd, "ip": cip, "time": ets, "runTime": rt, "buffer": buffer, "respContent": r.Response.Writer.Header().Get("Content-Type")}
 		rec.writeAccess(r.Context(), logData)
 	}

@@ -60,15 +60,8 @@ func Handler(r *ghttp.Request, defaultMime string) {
 			return
 		}
 	}
-	var result interface{}
-	f.encrypted, result, err = tryEncrypt(r, mime, res)
-	if err != nil {
-		r.SetError(CodeError(500, err.Error(), nil))
-		f.InternalError(ctx, err.Error())
-		return
-	}
 	if mime == "HTML" {
 		f.staticTpl = gmeta.Get(res, "x-static-tpl").String() // 从meta读取静态视图
 	}
-	f.Success(ctx, result)
+	f.Success(ctx, res)
 }

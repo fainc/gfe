@@ -18,7 +18,6 @@ type format struct {
 }
 
 type FormatOptions struct {
-	encrypted bool   // 是否加密 handler
 	Mime      string // 输出类型
 	staticTpl string // HTML meta 指定静态渲染模板，优先级最低，handler 自动从 g.meta 读取
 	errorTpl  string // HTML 错误信息模板，优先级最高，根据错误码自动指定
@@ -74,7 +73,6 @@ type DataFormat struct {
 	Message   interface{} `json:"message"`   // 错误消息
 	Data      interface{} `json:"data"`      // 返回数据
 	Ext       interface{} `json:"ext"`       // 拓展数据（可能含有多个错误详情或其他附加数据）
-	Encrypted bool        `json:"encrypted"` // 数据是否加密
 }
 
 // Writer 标准格式数据输出
@@ -95,6 +93,5 @@ func (rec *format) writer(ctx context.Context, data interface{}, message string,
 		Data:      data,
 		Ext:       ext,
 		ErrorCode: errCode,
-		Encrypted: rec.encrypted,
 	}, code)
 }
