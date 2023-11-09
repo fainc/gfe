@@ -2,10 +2,13 @@ package middleware
 
 import (
 	"context"
+	ecdsa2 "crypto/ecdsa"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/fainc/go-crypto/ecdsa"
 	"github.com/fainc/gojwt"
 	"github.com/gogf/gf/v2/container/garray"
 	"github.com/gogf/gf/v2/crypto/gmd5"
@@ -17,55 +20,78 @@ import (
 )
 
 type jwt struct {
-	ConfigName string
+	cfg    jwtConfig
+	client *gojwt.JwtClient
 }
 
-func Jwt(configName ...string) *jwt {
-	if len(configName) == 0 || configName[0] == "" {
-		return &jwt{ConfigName: "default"}
+// NewJwt 建议使用单例，降低处理密钥开销
+func NewJwt(ctx context.Context, configName ...string) *jwt {
+	cname := "default"
+	if len(configName) != 0 && configName[0] != "" {
+		cname = configName[0]
 	}
-	return &jwt{ConfigName: configName[0]}
+	cfg := jwtConfig{
+		Public:  g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.public", cname)).String(),
+		Private: g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.private", cname)).String(),
+		Subject: g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.subject", cname)).String(),
+		Redis:   g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.redis", cname)).String(),
+		AuthUA:  g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.authUA", cname)).Bool(),
+		AuthIP:  g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.authIP", cname)).Bool(),
+	}
+	if cfg.Public == "" && cfg.Private == "" {
+		panic("jwt private / public key missing")
+	}
+	var pub *ecdsa2.PublicKey
+	var pri *ecdsa2.PrivateKey
+	if cfg.Public != "" {
+		pubDer, err := base64.StdEncoding.DecodeString(cfg.Public)
+		if err != nil {
+			panic(err.Error())
+		}
+		pub, err = ecdsa.ParsePublicKeyFromDer(pubDer)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	if cfg.Private != "" {
+		priDer, err := base64.StdEncoding.DecodeString(cfg.Private)
+		if err != nil {
+			panic(err.Error())
+		}
+		pri, err = ecdsa.ParsePrivateKeyFromDer(priDer)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+
+	client := gojwt.NewJwt(gojwt.JwtConfig{
+		JwtAlgo:    "ES256",
+		JwtPublic:  pub,
+		JwtPrivate: pri,
+	})
+	return &jwt{cfg: cfg, client: client}
 }
 
 type jwtConfig struct {
-	JwtAlgo   string
-	JwtSecret string
-	Subject   string
-	Redis     string // 关联配置redis组，不设置即不启用
-	AuthUA    bool   // 是否校验客户端信息（UA相对稳定，可选）
-	AuthIP    bool   // 是否强校验IP（严苛内部IP场景使用，面向客户端一般不启用）
+	Private string // 私钥加签
+	Public  string // 公钥验签
+	Subject string
+	Redis   string // 关联配置redis组，不设置即不启用
+	AuthUA  bool   // 是否校验客户端信息（UA相对稳定，可选）
+	AuthIP  bool   // 是否强校验IP（严苛内部IP场景使用，面向客户端一般不启用）
 }
 
-func (rec *jwt) GetConfig(ctx context.Context) (cfg jwtConfig, err error) {
-	cfg = jwtConfig{
-		JwtAlgo:   g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.algo", rec.ConfigName)).String(),
-		JwtSecret: g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.secret", rec.ConfigName)).String(),
-		Subject:   g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.subject", rec.ConfigName)).String(),
-		Redis:     g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.redis", rec.ConfigName)).String(),
-		AuthUA:    g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.authUA", rec.ConfigName)).Bool(),
-		AuthIP:    g.Cfg().MustGet(ctx, fmt.Sprintf("jwt.%v.authIP", rec.ConfigName)).Bool(),
-	}
-	if cfg.JwtAlgo == "" || cfg.JwtSecret == "" {
-		err = errors.New("jwt config error")
-		return
-	}
-	return
-}
 func (rec *jwt) Auth(r *ghttp.Request) {
 	var whiteTables g.SliceStr
-	if util.GetReqMetaStr(r, "x-jwt-pass") == "true" {
+	if util.GetReqMetaStr(r, "x-jwt-ignore") == "true" {
 		whiteTables = append(whiteTables, r.URL.Path) // req 定义免验证 自动加入白名单
 	}
 	inWhite := rec.inWhiteTable(whiteTables, r.URL.Path)
-	cfg, err := rec.GetConfig(r.Context())
-	if err != nil {
-		r.SetError(response.CodeError(500, err.Error(), nil))
-		return
-	}
+	cfg := rec.cfg
 	tk, err := rec.parser(r.GetHeader("Authorization"), cfg)
 	if err == nil {
 		if cfg.Redis != "" {
-			revoked, redisErr := rec.IsRedisRevoked(cfg.Redis, tk.ID)
+			revoked, redisErr := rec.IsRevoked(cfg.Redis, tk.ID)
 			if redisErr != nil {
 				panic(redisErr.Error())
 			}
@@ -73,10 +99,10 @@ func (rec *jwt) Auth(r *ghttp.Request) {
 				err = errors.New("token is revoked")
 			}
 		}
-		if err == nil && cfg.AuthUA && tk.UA != gmd5.MustEncrypt(r.Request.UserAgent()) {
+		if err == nil && cfg.AuthUA && tk.RegUA != gmd5.MustEncrypt(r.Request.UserAgent()) {
 			err = errors.New("current ua is not trusted")
 		}
-		if err == nil && cfg.AuthIP && tk.IP != r.GetClientIp() {
+		if err == nil && cfg.AuthIP && tk.RegIP != r.GetClientIp() {
 			err = errors.New("current ip is not trusted")
 		}
 	}
@@ -88,6 +114,10 @@ func (rec *jwt) Auth(r *ghttp.Request) {
 		r.SetCtxVar("TOKEN_UID", tk.UID)
 		r.SetCtxVar("TOKEN_JTI", tk.ID)
 		r.SetCtxVar("TOKEN_EXP", tk.ExpiresAt)
+		r.SetCtxVar("TOKEN_REG_IP", tk.RegIP)
+		r.SetCtxVar("TOKEN_REG_UA", tk.RegUA)
+		r.SetCtxVar("TOKEN_REG_DEVICE_ID", tk.RegDeviceID)
+		r.SetCtxVar("TOKEN_EXT", tk.Ext)
 	}
 	r.Middleware.Next()
 }
@@ -101,13 +131,13 @@ func (rec *jwt) inWhiteTable(whiteTables g.SliceStr, url string) (res bool) {
 	return
 }
 func (rec *jwt) parser(token string, cfg jwtConfig) (c *gojwt.TokenClaims, err error) {
-	c, err = gojwt.NewJwt(gojwt.JwtConfig{
-		JwtAlgo:   cfg.JwtAlgo,
-		JwtSecret: cfg.JwtSecret,
-	}).Validate(&gojwt.ValidateParams{
+	c, err = rec.client.Validate(&gojwt.ValidateParams{
 		Token:   token,
 		Subject: cfg.Subject,
 	})
+	if err != nil {
+		return nil, err
+	}
 	if err != nil { // 通用化错误
 		err = errors.New("token is invalid")
 	}
@@ -115,26 +145,27 @@ func (rec *jwt) parser(token string, cfg jwtConfig) (c *gojwt.TokenClaims, err e
 }
 
 // Publish 代理方法，简化签发
-func (rec *jwt) Publish(ctx context.Context, uid int64, duration time.Duration) (tk, jti string, err error) {
+func (rec *jwt) Publish(ctx context.Context, uid int64, audience []string, ext map[string]interface{}, duration time.Duration) (tk, jti string, err error) {
 	r := g.RequestFromCtx(ctx)
-	cfg, err := rec.GetConfig(ctx)
+	cfg := rec.cfg
 	if err != nil {
 		return
 	}
-	tk, jti, err = gojwt.NewJwt(gojwt.JwtConfig{
-		JwtAlgo:   "HS256",
-		JwtSecret: cfg.JwtSecret,
-	}).Publish(&gojwt.IssueParams{
+	tk, jti, err = rec.client.Publish(&gojwt.IssueParams{
 		Subject:  cfg.Subject,
-		UID:      uid,
+		Audience: audience,
 		Duration: duration,
-		IP:       r.GetClientIp(),
-		UA:       gmd5.MustEncrypt(r.Request.UserAgent()),
+		PayloadClaims: gojwt.PayloadClaims{
+			UID:   uid,
+			RegIP: r.GetClientIp(),
+			RegUA: gmd5.MustEncrypt(r.Request.UserAgent()),
+			Ext:   ext,
+		},
 	})
 	return
 }
 
-func (rec *jwt) IsRedisRevoked(redisConfig, jti string) (result bool, err error) {
+func (rec *jwt) IsRevoked(redisConfig, jti string) (result bool, err error) {
 	n, err := g.Redis(redisConfig).Exists(context.Background(), "jwt_block_"+jti)
 	if err != nil {
 		return

@@ -25,5 +25,5 @@ bin
 /utility/
 /main.go
 /Makefile
-/test/
 /logs/
+/instance/
