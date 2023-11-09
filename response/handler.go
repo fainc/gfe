@@ -55,6 +55,9 @@ func Handler(r *ghttp.Request, defaultMime string) {
 		case http.StatusMethodNotAllowed: // 405
 			f.MethodNotAllowed(ctx, nil)
 			return
+		case http.StatusTooManyRequests: // 429
+			f.TooManyRequests(ctx, nil)
+			return
 		default: // 未知的错误状态码
 			f.InternalError(ctx, "unsupported http status code")
 			return

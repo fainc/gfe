@@ -63,6 +63,9 @@ func (rec *format) NotFound(ctx context.Context, ext interface{}) {
 func (rec *format) MethodNotAllowed(ctx context.Context, ext interface{}) {
 	rec.errorSyncHTTPStatus(ctx, 405, gi18n.Translate(ctx, "MethodNotAllowed"), ext)
 }
+func (rec *format) TooManyRequests(ctx context.Context, ext interface{}) {
+	rec.errorSyncHTTPStatus(ctx, 429, gi18n.Translate(ctx, "TooManyRequests"), ext)
+}
 func (rec *format) InternalError(ctx context.Context, ext interface{}) {
 	rec.errorSyncHTTPStatus(ctx, 500, gi18n.Translate(ctx, "InternalError"), ext)
 }

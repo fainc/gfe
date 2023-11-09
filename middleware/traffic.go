@@ -25,7 +25,7 @@ type traffic struct {
 
 var rds *gredis.Redis
 
-func Traffic() *traffic {
+func NewTraffic() *traffic {
 	return &traffic{ // 默认配置
 		GlobalIPQPS:       5,
 		GlobalIPQPM:       10,
@@ -35,7 +35,7 @@ func Traffic() *traffic {
 		GlobalIPQTM:       1000,
 	}
 }
-func (rec *traffic) SetRedisAdapter(r *gredis.Redis) {
+func (rec *traffic) SetRedisAdapter(r *gredis.Redis) *traffic {
 	if rds != nil {
 		panic("traffic: don't set redis adapter repeatedly")
 	}
@@ -47,6 +47,14 @@ func (rec *traffic) SetRedisAdapter(r *gredis.Redis) {
 		panic("traffic: test ping error :" + err.Error())
 	}
 	rds = r
+	return rec
+}
+
+func (rec *traffic) getRdsClient() (r *gredis.Redis) {
+	if rds == nil {
+		panic("redis is not initialize")
+	}
+	return rds
 }
 
 // RateLimit 接口速率限制
@@ -58,27 +66,27 @@ func (rec *traffic) RateLimit(r *ghttp.Request) {
 		if rec.GlobalIPQTM != 0 {
 			ipQTM = rec.getIntValue(ctx, fmt.Sprintf("gb_ip_qtm_%v", IP))
 			if ipQTM >= rec.GlobalIPQTM {
-				r.SetError(response.CodeError(400, "IP punished, try again next month", nil))
+				r.SetError(response.CodeError(429, "IP punished, try again next month", nil))
 				return
 			}
 		}
 		if rec.GlobalIPQTD != 0 {
 			ipQTD = rec.getIntValue(ctx, fmt.Sprintf("gb_ip_qtd_%v", IP))
 			if ipQTD >= rec.GlobalIPQTD {
-				r.SetError(response.CodeError(400, "IP punished, try again next day", nil))
+				r.SetError(response.CodeError(429, "IP punished, try again next day", nil))
 				return
 			}
 		}
 		punish := rec.getPTTL(ctx, fmt.Sprintf("gb_ip_punish_%v", IP))
 		if punish > 0 || punish == -1 { // 惩罚剩余PTTL -1 永不过期
-			r.SetError(response.CodeError(400, fmt.Sprintf("IP punished, try again in %vs", (time.Duration(punish)*time.Millisecond).Seconds()), nil))
+			r.SetError(response.CodeError(429, fmt.Sprintf("IP punished, try again in %vs", (time.Duration(punish)*time.Millisecond).Seconds()), nil))
 			return
 		}
 		// QPH 小时级
 		if rec.GlobalIPQPH != 0 {
 			err := rec.ipLevel(ctx, IP, "qph", rec.GlobalIPQPH, time.Hour, time.Duration(rec.GlobalIPQPSPunish)*time.Second)
 			if err != nil {
-				r.SetError(response.CodeError(400, err.Error(), nil))
+				r.SetError(response.CodeError(429, err.Error(), nil))
 				return
 			}
 		}
@@ -86,7 +94,7 @@ func (rec *traffic) RateLimit(r *ghttp.Request) {
 		if rec.GlobalIPQPM != 0 {
 			err := rec.ipLevel(ctx, IP, "qpm", rec.GlobalIPQPM, time.Minute, time.Duration(rec.GlobalIPQPSPunish)*time.Second)
 			if err != nil {
-				r.SetError(response.CodeError(400, err.Error(), nil))
+				r.SetError(response.CodeError(429, err.Error(), nil))
 				return
 			}
 		}
@@ -94,7 +102,7 @@ func (rec *traffic) RateLimit(r *ghttp.Request) {
 		if rec.GlobalIPQPS != 0 {
 			err := rec.ipLevel(ctx, IP, "qps", rec.GlobalIPQPS, time.Second, time.Duration(rec.GlobalIPQPSPunish)*time.Second)
 			if err != nil {
-				r.SetError(response.CodeError(400, err.Error(), nil))
+				r.SetError(response.CodeError(429, err.Error(), nil))
 				return
 			}
 		}
@@ -129,7 +137,7 @@ func (rec *traffic) ipLevel(ctx context.Context, ip string, level string, max in
 }
 
 func (rec *traffic) getIntValue(ctx context.Context, key string) int {
-	v, err := rds.Get(ctx, key)
+	v, err := rec.getRdsClient().Get(ctx, key)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -137,7 +145,7 @@ func (rec *traffic) getIntValue(ctx context.Context, key string) int {
 }
 
 func (rec *traffic) getPTTL(ctx context.Context, key string) int64 {
-	v, err := rds.PTTL(ctx, key)
+	v, err := rec.getRdsClient().PTTL(ctx, key)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -145,18 +153,18 @@ func (rec *traffic) getPTTL(ctx context.Context, key string) int64 {
 }
 
 func (rec *traffic) setOrUpdateWithPTTL(ctx context.Context, key string, value interface{}, setDuration time.Duration) {
-	pttl, err := rds.PTTL(ctx, key)
+	pttl, err := rec.getRdsClient().PTTL(ctx, key)
 	if err != nil {
 		panic(err.Error())
 	}
 	if pttl > 0 || pttl == -1 { // 延续有效期并更新值，KEEPTTL 6.0以上才支持暂不使用
-		_, err = rds.Do(ctx, "SET", key, value, "KEEPTTL")
+		_, err = rec.getRdsClient().Do(ctx, "SET", key, value, "KEEPTTL")
 		if err != nil {
 			panic(err.Error())
 		}
 	}
 	if pttl == 0 || pttl == -2 { // 过期或不存在，直接SET并覆盖新TTL
-		_, err = rds.Do(ctx, "SET", key, value, "PX", setDuration.Milliseconds()) // 使用毫秒级有效期
+		_, err = rec.getRdsClient().Do(ctx, "SET", key, value, "PX", setDuration.Milliseconds()) // 使用毫秒级有效期
 		if err != nil {
 			panic(err.Error())
 		}
@@ -164,18 +172,18 @@ func (rec *traffic) setOrUpdateWithPTTL(ctx context.Context, key string, value i
 }
 
 func (rec *traffic) setOrUpdateWithExpired(ctx context.Context, key string, value interface{}, expired int64) {
-	pttl, err := rds.PTTL(ctx, key)
+	pttl, err := rec.getRdsClient().PTTL(ctx, key)
 	if err != nil {
 		panic(err.Error())
 	}
 	if pttl > 0 || pttl == -1 { // 延续有效期并更新值，KEEPTTL 6.0以上才支持暂不使用
-		_, err = rds.Do(ctx, "SET", key, value, "KEEPTTL")
+		_, err = rec.getRdsClient().Do(ctx, "SET", key, value, "KEEPTTL")
 		if err != nil {
 			panic(err.Error())
 		}
 	}
 	if pttl == 0 || pttl == -2 { // 过期或不存在，直接SET并覆盖新TTL
-		_, err = rds.Do(ctx, "SET", key, value, "PXAT", expired) // 使用毫秒级有效期
+		_, err = rec.getRdsClient().Do(ctx, "SET", key, value, "PXAT", expired) // 使用毫秒级有效期
 		if err != nil {
 			panic(err.Error())
 		}
