@@ -170,6 +170,5 @@ func (rec *jwt) IsRevoked(redisConfig, jti string) (result bool, err error) {
 	if err != nil {
 		return
 	}
-	g.Dump(n)
 	return n > 0, err
 }
