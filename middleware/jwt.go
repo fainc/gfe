@@ -15,6 +15,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 
+	"github.com/fainc/gfe/helper"
 	"github.com/fainc/gfe/response"
 	"github.com/fainc/gfe/util"
 )
@@ -111,13 +112,15 @@ func (rec *jwt) Auth(r *ghttp.Request) {
 		return
 	}
 	if err == nil && tk != nil {
-		r.SetCtxVar("TOKEN_UID", tk.UID)
-		r.SetCtxVar("TOKEN_JTI", tk.ID)
-		r.SetCtxVar("TOKEN_EXP", tk.ExpiresAt)
-		r.SetCtxVar("TOKEN_REG_IP", tk.RegIP)
-		r.SetCtxVar("TOKEN_REG_UA", tk.RegUA)
-		r.SetCtxVar("TOKEN_REG_DEVICE_ID", tk.RegDeviceID)
-		r.SetCtxVar("TOKEN_EXT", tk.Ext)
+		helper.Ctx(r.Context()).SetUser(helper.CtxUser{
+			UID:         tk.UID,
+			JTI:         tk.ID,
+			Exp:         tk.ExpiresAt.Time,
+			RegIP:       tk.RegIP,
+			RegUA:       tk.RegUA,
+			RegDeviceID: tk.RegDeviceID,
+			Ext:         tk.Ext,
+		})
 	}
 	r.Middleware.Next()
 }
@@ -135,11 +138,9 @@ func (rec *jwt) parser(token string, cfg jwtConfig) (c *gojwt.TokenClaims, err e
 		Token:   token,
 		Subject: cfg.Subject,
 	})
-	if err != nil {
-		return nil, err
-	}
 	if err != nil { // 通用化错误
-		err = errors.New("token is invalid")
+		err = response.CodeError(-1, "xxx", "")
+		panic(err)
 	}
 	return
 }
