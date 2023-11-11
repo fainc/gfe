@@ -139,8 +139,7 @@ func (rec *jwt) parser(token string, cfg jwtConfig) (c *gojwt.TokenClaims, err e
 		Subject: cfg.Subject,
 	})
 	if err != nil { // 通用化错误
-		err = response.CodeError(-1, "xxx", "")
-		panic(err)
+		err = errors.New("token is invalid")
 	}
 	return
 }
@@ -171,5 +170,6 @@ func (rec *jwt) IsRevoked(redisConfig, jti string) (result bool, err error) {
 	if err != nil {
 		return
 	}
+	g.Dump(n)
 	return n > 0, err
 }
