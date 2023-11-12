@@ -16,5 +16,5 @@ func setServerHeader(r *ghttp.Request) {
 	serverID, _ := gmd5.Encrypt(serverName)
 	r.Response.Header().Set("Server-Id", serverID)
 	r.Response.Header().Set("Server-Lang", gi18n.LanguageFromCtx(r.Context()))
-	r.Response.Header().Set("Server-Et", gconv.String(gtime.Now().TimestampMilli()-r.EnterTime))
+	r.Response.Header().Set("Server-RunTime", gconv.String(gtime.Now().TimestampMilli()-r.EnterTime))
 }
