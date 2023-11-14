@@ -18,7 +18,7 @@ func Handler(r *ghttp.Request, defaultMime string) {
 		mime = gmeta.Get(res, "mime").String()
 	)
 	// openapi/pprof/已退出程序流程/下载任务
-	if r.IsExited() || gstr.Contains(r.RequestURI, "api.json") || gstr.Contains(r.RequestURI, "/pprof/") || r.Response.Writer.Header().Get("Content-Type") == "application/force-download" {
+	if r.IsExited() || gstr.Contains(r.RequestURI, "api.json") || gstr.Contains(r.RequestURI, "/debug/pprof/") || r.Response.Writer.Header().Get("Content-Type") == "application/force-download" {
 		return
 	}
 	// 声明meta为自定义输出时，不走当前中间件
