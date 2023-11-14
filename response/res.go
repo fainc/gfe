@@ -27,8 +27,13 @@ func CodeError(code int, message string, ext ...interface{}) error {
 	return newCodeError(code, message, ext)
 }
 
-// CodeErrorTranslate 返回带错误码和翻译信息的错误
+// CodeErrorTranslate 返回带错误码和翻译信息的错误，代理 codeErrorTranslate 实现错误列表
 func CodeErrorTranslate(ctx context.Context, code int, message string, ext ...interface{}) error {
+	return codeErrorTranslate(ctx, code, message, ext)
+}
+
+// codeErrorTranslate
+func codeErrorTranslate(ctx context.Context, code int, message string, ext ...interface{}) error {
 	message = gi18n.T(ctx, message)
 	return newCodeError(code, message, ext...)
 }
@@ -40,35 +45,35 @@ func CodeErrorTranslateFormat(ctx context.Context, code int, format string, valu
 }
 
 func UnAuthorizedError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, 401, "UnAuthorized", ext)
+	return codeErrorTranslate(ctx, 401, "UnAuthorized", ext)
 }
 
 func SignatureError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, 402, "SignatureError", ext)
+	return codeErrorTranslate(ctx, 402, "SignatureError", ext)
 }
 
 func ForbiddenError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, 403, "Forbidden", ext)
+	return codeErrorTranslate(ctx, 403, "Forbidden", ext)
 }
 func NotFoundError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, 404, "NotFound", ext)
+	return codeErrorTranslate(ctx, 404, "NotFound", ext)
 }
 func MethodNotAllowedError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, 405, "MethodNotAllowed", ext)
+	return codeErrorTranslate(ctx, 405, "MethodNotAllowed", ext)
 }
 func TooManyRequestsError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, 429, "TooManyRequests", ext)
+	return codeErrorTranslate(ctx, 429, "TooManyRequests", ext)
 }
 func InternalError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, 500, "InternalError", ext)
+	return codeErrorTranslate(ctx, 500, "InternalError", ext)
 }
 
 // StandError 常规错误，最常用，返回一个统一code为-1的错误，支持多错误列表输出
 func StandError(ctx context.Context, message string, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, -1, message, ext)
+	return codeErrorTranslate(ctx, -1, message, ext)
 }
 
-// UnknownError 未知错误，比较少用，一般是没有捕获到错误信息的情况下进行兜底
-func UnknownError(ctx context.Context) error {
+// unknownError 未知错误，没有捕获到错误信息的情况下进行兜底
+func unknownError(ctx context.Context) error {
 	return StandError(ctx, "UnknownError")
 }

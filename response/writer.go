@@ -34,7 +34,7 @@ func (rec *format) Success(ctx context.Context, data interface{}, tpl ...string)
 // StandardError 400 业务级标准错误输出
 func (rec *format) StandardError(ctx context.Context, err error, tpl ...string) {
 	if err == nil {
-		err = UnknownError(ctx)
+		err = unknownError(ctx)
 	}
 	// 设置 html渲染默认模板为 error/400.html
 	viewTpl := fmt.Sprintf("error/%v.html", 400)
@@ -47,7 +47,7 @@ func (rec *format) StandardError(ctx context.Context, err error, tpl ...string) 
 // SyncHTTPCodeError 同步http状态码错误输出
 func (rec *format) SyncHTTPCodeError(ctx context.Context, err error, tpl ...string) {
 	if err == nil {
-		err = UnknownError(ctx)
+		err = unknownError(ctx)
 	}
 	e := gerror.Code(err)
 	// 设置 html渲染默认模板为 error/对应错误码.html
