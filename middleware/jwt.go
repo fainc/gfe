@@ -49,7 +49,7 @@ func (rec *jwt) Register(r *ghttp.Request) {
 		}
 	}
 	if err != nil && !inWhite {
-		r.SetError(response.CodeError(401, err.Error(), nil))
+		r.SetError(response.UnAuthorizedError(r.Context(), err.Error()))
 		return
 	}
 	if err == nil && tk != nil {

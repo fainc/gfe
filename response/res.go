@@ -14,19 +14,61 @@ type CustomRes struct {
 	g.Meta `mime:"custom" sm:"自定义数据返回" dc:"本接口使用自定义数据返回，非OPEN API v3规范，具体返回数据字段请联系管理员获取"`
 }
 
-// CodeError 返回带错误码错误，建议 code >= 1000 || == -1 (使用400标准错误http状态码, 400-500的错误码会和http状态码同步，其它< 1000的状态码统一500服务器未知错误)
-func CodeError(code int, message string, ext interface{}) error {
-	return gerror.NewCode(gcode.New(code, message, ext))
+func newCodeError(code int, message string, ext ...interface{}) error {
+	var detail interface{}
+	if len(ext) != 0 {
+		detail = ext[0]
+	}
+	return gerror.NewCode(gcode.New(code, message, detail))
 }
 
-// CodeErrorTranslate 返回带错误码和翻译信息的错误，建议 code >= 1000 || == -1 (使用400标准错误http状态码, 400-500的错误码会和http状态码同步，其它< 1000的状态码统一500服务器未知错误)
-func CodeErrorTranslate(ctx context.Context, code int, message string, ext interface{}) error {
+// CodeError 返回带错误码和错误详情的错误
+func CodeError(code int, message string, ext ...interface{}) error {
+	return newCodeError(code, message, ext)
+}
+
+// CodeErrorTranslate 返回带错误码和翻译信息的错误
+func CodeErrorTranslate(ctx context.Context, code int, message string, ext ...interface{}) error {
 	message = gi18n.T(ctx, message)
-	return CodeError(code, message, ext)
+	return newCodeError(code, message, ext...)
 }
 
-// CodeErrorTranslateFormat 返回带错误码和模板格式化翻译信息的错误，建议 code >= 1000 || == -1 (使用400标准错误http状态码, 400-500的错误码会和http状态码同步，其它< 1000的状态码统一500服务器未知错误)
+// CodeErrorTranslateFormat 返回带错误码和模板格式化翻译信息的错误
 func CodeErrorTranslateFormat(ctx context.Context, code int, format string, values ...interface{}) error {
 	message := gi18n.Tf(ctx, format, values)
-	return CodeError(code, message, nil)
+	return newCodeError(code, message)
+}
+
+func UnAuthorizedError(ctx context.Context, ext ...interface{}) error {
+	return CodeErrorTranslate(ctx, 401, "UnAuthorized", ext)
+}
+
+func SignatureError(ctx context.Context, ext ...interface{}) error {
+	return CodeErrorTranslate(ctx, 402, "SignatureError", ext)
+}
+
+func ForbiddenError(ctx context.Context, ext ...interface{}) error {
+	return CodeErrorTranslate(ctx, 403, "Forbidden", ext)
+}
+func NotFoundError(ctx context.Context, ext ...interface{}) error {
+	return CodeErrorTranslate(ctx, 404, "NotFound", ext)
+}
+func MethodNotAllowedError(ctx context.Context, ext ...interface{}) error {
+	return CodeErrorTranslate(ctx, 405, "MethodNotAllowed", ext)
+}
+func TooManyRequestsError(ctx context.Context, ext ...interface{}) error {
+	return CodeErrorTranslate(ctx, 429, "TooManyRequests", ext)
+}
+func InternalError(ctx context.Context, ext ...interface{}) error {
+	return CodeErrorTranslate(ctx, 500, "InternalError", ext)
+}
+
+// StandError 常规错误，最常用，返回一个统一code为-1的错误，支持多错误列表输出
+func StandError(ctx context.Context, message string, ext ...interface{}) error {
+	return CodeErrorTranslate(ctx, -1, message, ext)
+}
+
+// UnknownError 未知错误，比较少用，一般是没有捕获到错误信息的情况下进行兜底
+func UnknownError(ctx context.Context) error {
+	return StandError(ctx, "UnknownError")
 }

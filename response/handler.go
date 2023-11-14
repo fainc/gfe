@@ -29,42 +29,44 @@ func Handler(r *ghttp.Request, defaultMime string) {
 	if mime == "" { // 无指定，使用默认mime
 		mime = defaultMime
 	}
-	f := Format(FormatOptions{Mime: mime})
+	f := FormatWriter(mime)
 	// 已有err错误
 	if err != nil {
 		// -1:未定义错误code的error；>=1000 自定义错误码error；51:参数验证错误
 		if code.Code() == -1 || code.Code() >= 1000 || code.Code() == 51 {
-			f.Error(ctx, code.Code(), err.Error(), code.Detail())
+			f.StandardError(ctx, err)
 			return
 		}
 		// 4XX 常用error，同步http code；
 		if code.Code() >= 400 && code.Code() < 500 {
-			f.errorSyncHTTPStatus(ctx, code.Code(), err.Error(), code.Detail())
+			f.SyncHTTPCodeError(ctx, err)
 			return
 		}
-		// 其它错误
-		f.InternalError(ctx, nil)
+		// 其它错误，屏蔽错误细节
+		f.SyncHTTPCodeError(ctx, InternalError(ctx))
 		return
 	}
 	// 无错误但有响应状态码
 	if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
+		var e error
 		switch r.Response.Status {
+		case http.StatusForbidden: // 403
+			e = ForbiddenError(ctx)
 		case http.StatusNotFound: // 404
-			f.NotFound(ctx, nil)
-			return
+			e = NotFoundError(ctx)
 		case http.StatusMethodNotAllowed: // 405
-			f.MethodNotAllowed(ctx, nil)
-			return
+			e = MethodNotAllowedError(ctx)
 		case http.StatusTooManyRequests: // 429
-			f.TooManyRequests(ctx, nil)
-			return
+			e = TooManyRequestsError(ctx)
 		default: // 未知的错误状态码
-			f.InternalError(ctx, "unsupported http status code")
-			return
+			e = InternalError(ctx)
 		}
+		f.SyncHTTPCodeError(ctx, e)
+		return
 	}
-	if mime == "HTML" {
-		f.staticTpl = gmeta.Get(res, "x-static-tpl").String() // 从meta读取静态视图
+	var tpl string
+	if defaultMime == MimeHTML {
+		tpl = gmeta.Get(res, "x-tpl").String()
 	}
-	f.Success(ctx, res)
+	f.Success(ctx, res, tpl)
 }

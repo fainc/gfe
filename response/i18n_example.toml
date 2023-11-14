@@ -6,6 +6,7 @@ Forbidden = "没有访问权限"
 MethodNotAllowed = "请求方法非法"
 TooManyRequests = "请求过于频繁"
 SignatureError = "请求签名错误"
+UnknownError = "未知错误"
 
 #数据校验模块 i18n中文定义，如需使用请复制到您的gf i18n配置中
 "gf.gvalid.rule.required"             = "{attribute}字段不能为空"

@@ -93,8 +93,8 @@ func (rec *logger) writeAccess(ctx context.Context, data interface{}) {
 }
 
 // writeError 错误信息强制 Stdout = true，增强提示，需要依赖配置 logger.path 才能记录
-func (rec *logger) writeError(ctx context.Context, data interface{}) {
-	g.Log().Async().Cat("error").Header(true).Stack(false).Stdout(true).Error(ctx, data)
+func (rec *logger) writeError(ctx context.Context, err interface{}) {
+	g.Log().Async().Cat("error").Header(true).Stack(false).Stdout(true).Error(ctx, err)
 }
 func (rec *logger) Exception(ctx context.Context, err error) {
 	code := gerror.Code(err)
