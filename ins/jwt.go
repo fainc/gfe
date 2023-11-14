@@ -10,6 +10,7 @@ import (
 	"github.com/fainc/go-crypto/ecdsa"
 	"github.com/fainc/gojwt"
 	"github.com/gogf/gf/v2/crypto/gmd5"
+	"github.com/gogf/gf/v2/database/gredis"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/golang-jwt/jwt/v5"
 
@@ -18,7 +19,8 @@ import (
 
 type JwtIns struct {
 	Cfg    cfg.JwtCfg       // 暴露实例配置
-	client *gojwt.JwtClient // 暴露底层GoJwt
+	client *gojwt.JwtClient // 底层GoJwt
+	rds    *gredis.Redis    // redis
 }
 
 // NewJwt 新的JWT实例
@@ -55,7 +57,15 @@ func NewJwt(jwtCfg cfg.JwtCfg) *JwtIns {
 		JwtPublic:  pub,
 		JwtPrivate: pri,
 	})
-	return &JwtIns{Cfg: c, client: client}
+	var rds *gredis.Redis
+	if c.Redis != "" {
+		rds = g.Redis(c.Redis)
+		_, err := rds.Get(context.Background(), "ping")
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+	return &JwtIns{Cfg: c, client: client, rds: rds}
 }
 
 // Validate Token核验
@@ -93,5 +103,28 @@ func (rec *JwtIns) Publish(ctx context.Context, uid int64, audience []string, ex
 			Ext:   ext,
 		},
 	})
+	return
+}
+
+// IsRevoked 通过redis判断jwt是否吊销
+func (rec *JwtIns) IsRevoked(ctx context.Context, jti string) (result bool, err error) {
+	if rec.rds == nil {
+		err = errors.New("redis is not init for current jwt instance")
+		return
+	}
+	n, err := rec.rds.Exists(ctx, "jwt_block_"+jti)
+	if err != nil {
+		return
+	}
+	return n > 0, err
+}
+
+// Revoke 通过redis吊销redis
+func (rec *JwtIns) Revoke(ctx context.Context, jti string, t time.Duration) (err error) {
+	if rec.rds == nil {
+		err = errors.New("redis is not init for current jwt instance")
+		return
+	}
+	err = rec.rds.SetEX(ctx, "jwt_block_"+jti, 1, t.Milliseconds())
 	return
 }

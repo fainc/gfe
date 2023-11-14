@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"errors"
 
 	"github.com/gogf/gf/v2/container/garray"
@@ -34,7 +33,7 @@ func (rec *jwt) Register(r *ghttp.Request) {
 	tk, err := rec.i.Validate(r.GetHeader("Authorization"))
 	if err == nil {
 		if c.Redis != "" {
-			revoked, redisErr := rec.IsRevoked(c.Redis, tk.ID)
+			revoked, redisErr := rec.i.IsRevoked(r.Context(), tk.ID)
 			if redisErr != nil {
 				panic(redisErr.Error())
 			}
@@ -74,12 +73,4 @@ func (rec *jwt) inWhiteTable(whiteTables g.SliceStr, url string) (res bool) {
 		}
 	}
 	return
-}
-
-func (rec *jwt) IsRevoked(redisConfig, jti string) (result bool, err error) {
-	n, err := g.Redis(redisConfig).Exists(context.Background(), "jwt_block_"+jti)
-	if err != nil {
-		return
-	}
-	return n > 0, err
 }
