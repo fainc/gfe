@@ -4,7 +4,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 )
 
-func CORSDefault(r *ghttp.Request) {
+func CORSDefaultRegister(r *ghttp.Request) {
 	r.Response.CORSDefault()
 	r.Middleware.Next()
 }

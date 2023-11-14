@@ -8,11 +8,11 @@ import (
 	"github.com/gogf/gf/v2/text/gstr"
 )
 
-// MultiLang 优先注册中间件，以免lang为空
+// MultiLangRegister 优先注册中间件，以免lang为空
 // language:
 // - en
 // - xx
-func MultiLang(r *ghttp.Request) {
+func MultiLangRegister(r *ghttp.Request) {
 	clientLang := gstr.Explode(",", r.Header.Get("Accept-Language"))
 	serverLang := "en" // 默认
 	supportLang := garray.NewArrayFrom(g.Cfg().MustGet(r.Context(), "language").Array(), true)

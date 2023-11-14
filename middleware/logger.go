@@ -76,7 +76,7 @@ func (rec *logger) Register(r *ghttp.Request) {
 		for _, key := range rec.AccessHeaderKey {
 			header.Set(key, r.GetHeader(key))
 		}
-		jwtInfo := helper.Ctx(r.Context()).GetUser()
+		jwtInfo := helper.CtxUser().Get(r.Context())
 		logData := g.Map{"jwt": jwtInfo, "header": header, "remoteAddr": r.Request.RemoteAddr, "referer": referer, "traceId": traceID, "method": r.Response.Request.Method, "code": r.Response.Status, "uri": r.Request.RequestURI, "contentType": ct, "UA": ua, "body": bd, "ip": cip, "time": ets, "runTime": rt, "buffer": buffer, "respContent": r.Response.Writer.Header().Get("Content-Type")}
 		rec.writeAccess(r.Context(), logData)
 	}

@@ -7,15 +7,14 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 )
 
-type ctx struct {
-	c context.Context
+type ctxUser struct {
 }
 
-func Ctx(c context.Context) *ctx {
-	return &ctx{c: c}
+func CtxUser() *ctxUser {
+	return &ctxUser{}
 }
 
-type CtxUser struct {
+type CtxUserInfo struct {
 	UID         int64
 	JTI         string
 	Exp         time.Time
@@ -25,13 +24,13 @@ type CtxUser struct {
 	Ext         g.Map
 }
 
-// GetUser 获取CTX用户信息
-func (rec *ctx) GetUser() CtxUser {
-	r := g.RequestFromCtx(rec.c)
+// Get 获取CTX用户信息
+func (rec *ctxUser) Get(ctx context.Context) CtxUserInfo {
+	r := g.RequestFromCtx(ctx)
 	if r == nil {
 		panic("get request from ctx failed")
 	}
-	return CtxUser{
+	return CtxUserInfo{
 		UID:         r.GetCtxVar("TOKEN_UID").Int64(),
 		JTI:         r.GetCtxVar("TOKEN_JTI").String(),
 		Exp:         r.GetCtxVar("TOKEN_EXP").Time(),
@@ -42,9 +41,9 @@ func (rec *ctx) GetUser() CtxUser {
 	}
 }
 
-// SetUser 设置CTX用户信息
-func (rec *ctx) SetUser(u CtxUser) {
-	r := g.RequestFromCtx(rec.c)
+// Set 设置CTX用户信息
+func (rec *ctxUser) Set(ctx context.Context, u CtxUserInfo) {
+	r := g.RequestFromCtx(ctx)
 	if r == nil {
 		panic("get request from ctx failed")
 	}
