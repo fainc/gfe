@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/genv"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 
 	"github.com/fainc/gfe/helper"
 	"github.com/fainc/gfe/util"
@@ -101,7 +102,7 @@ func (rec *logger) Exception(ctx context.Context, err error) {
 	// -1 未定义错误，一般直接抛出error产生，51，请求参数验证错误
 	if (code.Code() < 400 && code.Code() != -1 && code.Code() != 51) || (code.Code() < 1000 && code.Code() >= 500) { // 需要捕获错误信息的code范围
 		if gerror.HasStack(err) {
-			rec.writeError(ctx, gerror.Stack(err))
+			rec.writeError(ctx, gerror.Stack(err)+gconv.String(code.Detail()))
 		} else {
 			rec.writeError(ctx, err)
 		}

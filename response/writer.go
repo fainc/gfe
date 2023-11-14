@@ -19,7 +19,7 @@ type format struct {
 	Mime string // 输出类型
 }
 
-// FormatWriter 格式化输出，全局后置response中间件也是调用这个方法，不建议单独调用该方法输出（提前输出），最佳实践是通过 r.SetError 统一处理。
+// FormatWriter 格式化输出
 func FormatWriter(mime ...string) *format {
 	if len(mime) == 0 {
 		return &format{Mime: MimeJSON}
@@ -31,7 +31,7 @@ func (rec *format) Success(ctx context.Context, data interface{}, tpl ...string)
 	rec.writer(ctx, 200, nil, data, tpl...)
 }
 
-// StandardError 400 业务级标准错误输出
+// StandardError 400 业务级标准错误输出,不建议错误处理单独调用该方法输出（直接输出错误不会被日志系统捕获），最佳实践是通过 r.SetError 统一处理。
 func (rec *format) StandardError(ctx context.Context, err error, tpl ...string) {
 	if err == nil {
 		err = unknownError(ctx)
@@ -44,7 +44,7 @@ func (rec *format) StandardError(ctx context.Context, err error, tpl ...string) 
 	rec.writer(ctx, 400, err, nil, viewTpl)
 }
 
-// SyncHTTPCodeError 同步http状态码错误输出
+// SyncHTTPCodeError 同步http状态码错误输出,不建议错误处理单独调用该方法输出（直接输出错误不会被日志系统捕获），最佳实践是通过 r.SetError 统一处理。
 func (rec *format) SyncHTTPCodeError(ctx context.Context, err error, tpl ...string) {
 	if err == nil {
 		err = unknownError(ctx)
@@ -99,7 +99,7 @@ func (rec *format) writer(ctx context.Context, code int, error error, data inter
 		view, err := r.Response.ParseTpl(t, gconv.Map(result))
 		if err != nil {
 			// 模板渲染直接输出错误兜底
-			r.SetError(CodeError(500, err.Error()))
+			r.SetError(InternalError(ctx, err.Error()))
 			r.Response.WriteStatus(500, "html render tpl error")
 		} else {
 			r.Response.Write(view)
