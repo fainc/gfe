@@ -14,6 +14,11 @@ type CustomRes struct {
 	g.Meta `mime:"custom" sm:"自定义数据返回" dc:"本接口使用自定义数据返回，非OPEN API v3规范，具体返回数据字段请联系管理员获取"`
 }
 
+// EmptyRes 空数据
+type EmptyRes struct {
+	g.Meta `sm:"空数据返回" dc:"本接口返回空数据"`
+}
+
 func newCodeError(code int, message string, ext ...interface{}) error {
 	var detail interface{}
 	if len(ext) != 0 {

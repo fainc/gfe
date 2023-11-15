@@ -9,7 +9,7 @@ import (
 	"github.com/gogf/gf/v2/util/gmeta"
 )
 
-func Handler(r *ghttp.Request, defaultMime string) {
+func MiddlewareHandler(r *ghttp.Request, defaultMime string) {
 	var (
 		ctx  = r.Context()
 		err  = r.GetError()
@@ -26,7 +26,7 @@ func Handler(r *ghttp.Request, defaultMime string) {
 		setServerHeader(r)
 		return
 	}
-	if mime == "" { // 无指定，使用默认mime
+	if mime == "" { // 无指定MIME，使用默认MIME
 		mime = defaultMime
 	}
 	f := FormatWriter(mime)

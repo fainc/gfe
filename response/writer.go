@@ -16,13 +16,13 @@ const (
 )
 
 type format struct {
-	Mime string // 输出类型
+	mime string // 输出类型
 }
 
-// FormatWriter 格式化输出
+// FormatWriter 格式化输出 TODO 屏蔽writer外部使用
 func FormatWriter(mime ...string) *format {
 	if len(mime) == 0 {
-		return &format{Mime: MimeJSON}
+		return &format{mime: MimeJSON}
 	}
 	return &format{mime[0]}
 }
@@ -88,7 +88,7 @@ func (rec *format) writer(ctx context.Context, code int, error error, data inter
 	r := g.RequestFromCtx(ctx)
 	r.Response.WriteStatus(code)
 	r.Response.ClearBuffer()
-	switch rec.Mime {
+	switch rec.mime {
 	case MimeXML:
 		r.Response.WriteXml(result, "xml")
 	case MimeHTML:
