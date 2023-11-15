@@ -29,7 +29,7 @@ func MiddlewareHandler(r *ghttp.Request, defaultMime string) {
 	if mime == "" { // 无指定MIME，使用默认MIME
 		mime = defaultMime
 	}
-	f := FormatWriter(mime)
+	f := formatWriter(mime)
 	// 已有err错误
 	if err != nil {
 		// -1:未定义错误code的error；>=1000 自定义错误码error；51:参数验证错误
@@ -42,7 +42,7 @@ func MiddlewareHandler(r *ghttp.Request, defaultMime string) {
 			f.SyncHTTPCodeError(ctx, err)
 			return
 		}
-		// 其它错误，屏蔽错误细节
+		// 其它错误，屏蔽错误细节再输出
 		f.SyncHTTPCodeError(ctx, InternalError(ctx))
 		return
 	}
@@ -65,7 +65,7 @@ func MiddlewareHandler(r *ghttp.Request, defaultMime string) {
 		return
 	}
 	var tpl string
-	if defaultMime == MimeHTML {
+	if mime == MimeHTML {
 		tpl = gmeta.Get(res, "x-tpl").String()
 	}
 	f.Success(ctx, res, tpl)

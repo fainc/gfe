@@ -80,5 +80,10 @@ func StandError(ctx context.Context, message string, ext ...interface{}) error {
 
 // unknownError 未知错误，没有捕获到错误信息的情况下进行兜底
 func unknownError(ctx context.Context) error {
-	return StandError(ctx, "UnknownError")
+	return StandError(ctx, "UnknownError", "no detail")
+}
+
+// fixFrameError 补全框架的gcode自带错误码信息
+func fixFrameError(ctx context.Context, code int, message string, ext ...interface{}) error {
+	return codeErrorTranslate(ctx, code, message, ext)
 }

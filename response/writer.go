@@ -19,8 +19,8 @@ type format struct {
 	mime string // 输出类型
 }
 
-// FormatWriter 格式化输出 TODO 屏蔽writer外部使用
-func FormatWriter(mime ...string) *format {
+// FormatWriter 格式化输出
+func formatWriter(mime ...string) *format {
 	if len(mime) == 0 {
 		return &format{mime: MimeJSON}
 	}
@@ -31,7 +31,7 @@ func (rec *format) Success(ctx context.Context, data interface{}, tpl ...string)
 	rec.writer(ctx, 200, nil, data, tpl...)
 }
 
-// StandardError 400 业务级标准错误输出,不建议错误处理单独调用该方法输出（直接输出错误不会被日志系统捕获），最佳实践是通过 r.SetError 统一处理。
+// StandardError 400 业务级标准错误输出
 func (rec *format) StandardError(ctx context.Context, err error, tpl ...string) {
 	if err == nil {
 		err = unknownError(ctx)
@@ -74,10 +74,27 @@ func (rec *format) writer(ctx context.Context, code int, error error, data inter
 	var e *errFormat
 	if error != nil {
 		ge := gerror.Code(error)
+		if ge.Code() == 51 { // 验证错误重写
+			ge = gerror.Code(fixFrameError(ctx, ge.Code(), "ValidationFailed", error.Error()))
+		}
 		e = &errFormat{
 			Code:    ge.Code(),
-			Message: error.Error(), // 直接从error读，未封装的普通err 使用ge.Message() 错误信息为空
-			Detail:  ge.Detail(),   // list or null
+			Message: ge.Message(), // 直接从error读，未封装的普通err 使用ge.Message() 错误信息为空
+			Detail:  ge.Detail(),
+		}
+		if e.Code == -1 && e.Message == "" { // 普通err返回没有message时，从error.Error()读取
+			e.Message = error.Error()
+		}
+		_, isSlice := e.Detail.([]interface{}) // 切片断言
+		if isSlice && g.IsNil(e.Detail) {
+			e.Detail = make([]interface{}, 0) // nil切片，make避免null的输出
+		}
+		if !isSlice {
+			d := make([]interface{}, 0, 1)
+			if !g.IsNil(e.Detail) {
+				d = append(d, e.Detail) // 非切片错误转换为切片错误
+			}
+			e.Detail = d
 		}
 	}
 	result := resultFormat{
