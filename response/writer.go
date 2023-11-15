@@ -61,7 +61,7 @@ func (rec *format) SyncHTTPCodeError(ctx context.Context, err error, tpl ...stri
 type errFormat struct {
 	Code    int         `json:"code"`    // 错误码，为-1（通用）或特定错误码
 	Message string      `json:"message"` // 错误信息，从err.Error()读取
-	Detail  interface{} `json:"detail"`  // 错误详情，为一个列表或null（使用错误封装才能附带错误列表，普通错误直接捕获detail为null）
+	Detail  interface{} `json:"detail"`  // 错误详情，为一个列表使用错误封装才能附带错误列表，普通错误直接捕获detail为空切片）
 }
 type resultFormat struct {
 	Code  int         `json:"code"`  // 业务状态码 与 http 状态码同步
@@ -82,7 +82,7 @@ func (rec *format) writer(ctx context.Context, code int, error error, data inter
 			Message: ge.Message(), // 直接从error读，未封装的普通err 使用ge.Message() 错误信息为空
 			Detail:  ge.Detail(),
 		}
-		if e.Code == -1 && e.Message == "" { // 普通err返回没有message时，从error.Error()读取
+		if e.Message == "" { // 普通err返回没有message时，尝试从error.Error()读取
 			e.Message = error.Error()
 		}
 		_, isSlice := e.Detail.([]interface{}) // 切片断言
