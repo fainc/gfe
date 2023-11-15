@@ -12,6 +12,7 @@ import (
 	"github.com/gogf/gf/v2/crypto/gmd5"
 	"github.com/gogf/gf/v2/database/gredis"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/fainc/gfe/cfg"
@@ -120,11 +121,12 @@ func (rec *JwtIns) IsRevoked(ctx context.Context, jti string) (result bool, err 
 }
 
 // Revoke 通过redis吊销redis
-func (rec *JwtIns) Revoke(ctx context.Context, jti string, t time.Duration) (err error) {
+func (rec *JwtIns) Revoke(ctx context.Context, jti string, exp time.Time) (err error) {
+	t := time.Until(exp).Seconds()
 	if rec.rds == nil {
 		err = errors.New("redis is not init for current jwt instance")
 		return
 	}
-	err = rec.rds.SetEX(ctx, "jwt_block_"+jti, 1, t.Milliseconds())
+	err = rec.rds.SetEX(ctx, "jwt_block_"+jti, 1, gconv.Int64(t))
 	return
 }
