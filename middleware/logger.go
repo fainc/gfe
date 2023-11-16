@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/genv"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/text/gstr"
 	"github.com/gogf/gf/v2/util/gconv"
 
 	"github.com/fainc/gfe/helper"
@@ -54,10 +55,14 @@ func (rec *logger) Register(r *ghttp.Request) {
 	r.Middleware.Next()
 	traceID := gctx.CtxId(r.Context())
 	// 业务日志
-	shouldLog := rec.AccessLog                                           // 是否需要日志
-	if shouldLog && util.GetReqMetaStr(r, "x-logger-ignore") == "true" { // 尝试读取规范路由标签
-		shouldLog = false
+	shouldLog := rec.AccessLog // 是否需要日志
+	if shouldLog {
+		// 移除不需要日志的内容
+		if util.GetReqMetaStr(r, "x-logger-ignore") == "true" || gstr.Contains(r.RequestURI, "api.json") || gstr.Contains(r.RequestURI, "/debug/pprof/") || r.Response.Writer.Header().Get("Content-Type") == "application/force-download" {
+			shouldLog = false
+		}
 	}
+
 	if shouldLog {
 		ct := r.GetHeader("Content-Type")
 		referer := r.GetHeader("Referer")
