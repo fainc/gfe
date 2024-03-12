@@ -3,6 +3,8 @@ package response
 import (
 	"net/http"
 
+	"github.com/gogf/gf/v2/errors/gcode"
+
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/text/gstr"
@@ -28,7 +30,7 @@ func (rec *responder) Middleware(r *ghttp.Request) {
 		err  = r.GetError()
 		res  = r.GetHandlerResponse()
 		code = gerror.Code(err)
-		mime = gmeta.Get(res, "format").String()
+		mime = gmeta.Get(res, "mime").String()
 	)
 	if mime == "" {
 		mime = rec.defaultFormat // set default format
@@ -46,23 +48,21 @@ func (rec *responder) Middleware(r *ghttp.Request) {
 	}
 	f := FormatWriter(mime)
 	if err != nil {
-		// -1:未定义错误code；>=1000 自定义错误码；51:参数验证错误
-		if code.Code() == -1 || code.Code() >= 1000 || code.Code() == 51 {
+		// 业务级错误 ：-1 未定义的错误；>=1000 自定义错误码；51 框架参数验证错误；401 授权错误
+		isBizError := code.Code() == -1 || code.Code() >= 1000 || code.Code() == gcode.CodeValidationFailed.Code() || code.Code() == 401
+		if isBizError {
 			f.StandardError(ctx, err)
 			return
 		}
-		// 4XX  常用同步 HTTP 状态码
-		if code.Code() >= 400 && code.Code() < 500 {
-			f.SyncHTTPCodeError(ctx, err)
-			return
-		}
-		// 其它错误，屏蔽错误细节再输出
-		f.SyncHTTPCodeError(ctx, InternalError(ctx))
+		// 其它非业务级别错误，屏蔽错误细节后输出 500 InternalError
+		f.InternalError(ctx, InternalError(ctx))
 		return
 	}
 	// 无错误但有响应状态码
 	if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
-		f.SyncHTTPCodeError(ctx, CodeErrorTranslate(ctx, r.Response.Status, http.StatusText(r.Response.Status)))
+		responseError := CodeErrorTranslate(ctx, r.Response.Status, http.StatusText(r.Response.Status))
+		f.SyncHTTPCodeError(ctx, responseError)
+		r.SetError(responseError) // Set an error for the next middleware, e.g. logs.
 		return
 	}
 	f.Success(ctx, res)

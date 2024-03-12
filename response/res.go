@@ -20,7 +20,7 @@ type EmptyRes struct {
 	g.Meta `sm:"空数据返回" dc:"本接口返回空数据"`
 }
 
-func newCodeError(code int, message string, ext ...interface{}) error {
+func CodeError(code int, message string, ext ...interface{}) error {
 	var detail interface{}
 	if len(ext) != 0 {
 		detail = ext[0]
@@ -28,43 +28,33 @@ func newCodeError(code int, message string, ext ...interface{}) error {
 	return gerror.NewCode(gcode.New(code, message, detail))
 }
 
-// CodeError 返回带错误码和错误详情的错误
-func CodeError(code int, message string, ext ...interface{}) error {
-	return newCodeError(code, message, ext)
-}
-
 func CodeErrorTranslate(ctx context.Context, code int, message string, ext ...interface{}) error {
 	message = gi18n.T(ctx, message)
-	return newCodeError(code, message, ext...)
+	return CodeError(code, message, ext...)
 }
 
 // CodeErrorTranslateFormat 返回带错误码和模板格式化翻译信息的错误
 func CodeErrorTranslateFormat(ctx context.Context, code int, format string, values ...interface{}) error {
 	message := gi18n.Tf(ctx, format, values)
-	return newCodeError(code, message)
+	return CodeError(code, message)
 }
 
 // UnAuthorizedError 未授权错误 401
 func UnAuthorizedError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, http.StatusUnauthorized, "Unauthorized", ext)
+	return CodeErrorTranslate(ctx, 401, "Unauthorized", ext)
 }
 
-// SignatureError 签名错误 404
+// SignatureError 签名错误 402
 func SignatureError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, http.StatusPaymentRequired, "SignatureError", ext)
+	return CodeErrorTranslate(ctx, 402, "SignatureError", ext)
 }
 
 // InternalError 服务器内部错误
 func InternalError(ctx context.Context, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, http.StatusInternalServerError, "InternalServerError", ext)
+	return CodeErrorTranslate(ctx, 500, http.StatusText(http.StatusInternalServerError), ext)
 }
 
 // StandError 常规错误，最常用，返回一个统一code为-1的错误，支持多错误列表输出
 func StandError(ctx context.Context, message string, ext ...interface{}) error {
 	return CodeErrorTranslate(ctx, -1, message, ext)
-}
-
-// fixFrameError 补全框架的gcode自带错误码信息
-func fixFrameError(ctx context.Context, code int, message string, ext ...interface{}) error {
-	return CodeErrorTranslate(ctx, code, message, ext)
 }
