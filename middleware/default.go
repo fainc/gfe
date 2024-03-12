@@ -8,14 +8,14 @@ import (
 
 // DefaultMiddlewareRegister 常用全局默认中间件统一注册
 func DefaultMiddlewareRegister(s *ghttp.Server, defaultMime string) {
-	s.BindMiddlewareDefault(CORSDefaultRegister, MultiLangRegister, Logger().Register, Response(defaultMime).Register)
+	s.BindMiddlewareDefault(CORSDefaultRegister, MultiLangRegister, Logger().Register, response.NewResponder(defaultMime).Middleware)
 }
 
 // GroupDefaultMiddlewareRegister  常用组默认中间件统一注册
 func GroupDefaultMiddlewareRegister(group *ghttp.RouterGroup, options ...string) {
-	defaultMime := response.MimeJSON
+	defaultMime := response.FormatJSON
 	if len(options) >= 1 {
 		defaultMime = options[0]
 	}
-	group.Middleware(CORSDefaultRegister, MultiLangRegister, Logger().Register, Response(defaultMime).Register)
+	group.Middleware(CORSDefaultRegister, MultiLangRegister, Logger().Register, response.NewResponder(defaultMime).Middleware)
 }

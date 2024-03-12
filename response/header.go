@@ -10,8 +10,8 @@ import (
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
-// 设置必要公共header参数
-func setServerHeader(r *ghttp.Request) {
+// SetDefaultResponseHeader 设置公共响应头
+func SetDefaultResponseHeader(r *ghttp.Request) {
 	serverName, _ := os.Hostname()
 	serverID, _ := gmd5.Encrypt(serverName)
 	r.Response.Header().Set("Server-Id", serverID)

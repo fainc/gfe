@@ -2,6 +2,7 @@ package response
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/gogf/gf/v2/errors/gcode"
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -32,13 +33,7 @@ func CodeError(code int, message string, ext ...interface{}) error {
 	return newCodeError(code, message, ext)
 }
 
-// CodeErrorTranslate 返回带错误码和翻译信息的错误，代理 codeErrorTranslate 实现错误列表
 func CodeErrorTranslate(ctx context.Context, code int, message string, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, code, message, ext)
-}
-
-// codeErrorTranslate
-func codeErrorTranslate(ctx context.Context, code int, message string, ext ...interface{}) error {
 	message = gi18n.T(ctx, message)
 	return newCodeError(code, message, ext...)
 }
@@ -49,41 +44,27 @@ func CodeErrorTranslateFormat(ctx context.Context, code int, format string, valu
 	return newCodeError(code, message)
 }
 
+// UnAuthorizedError 未授权错误 401
 func UnAuthorizedError(ctx context.Context, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, 401, "UnAuthorized", ext)
+	return CodeErrorTranslate(ctx, http.StatusUnauthorized, "Unauthorized", ext)
 }
 
+// SignatureError 签名错误 404
 func SignatureError(ctx context.Context, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, 402, "SignatureError", ext)
+	return CodeErrorTranslate(ctx, http.StatusPaymentRequired, "SignatureError", ext)
 }
 
-func ForbiddenError(ctx context.Context, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, 403, "Forbidden", ext)
-}
-func NotFoundError(ctx context.Context, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, 404, "NotFound", ext)
-}
-func MethodNotAllowedError(ctx context.Context, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, 405, "MethodNotAllowed", ext)
-}
-func TooManyRequestsError(ctx context.Context, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, 429, "TooManyRequests", ext)
-}
+// InternalError 服务器内部错误
 func InternalError(ctx context.Context, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, 500, "InternalError", ext)
+	return CodeErrorTranslate(ctx, http.StatusInternalServerError, "InternalServerError", ext)
 }
 
 // StandError 常规错误，最常用，返回一个统一code为-1的错误，支持多错误列表输出
 func StandError(ctx context.Context, message string, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, -1, message, ext)
-}
-
-// unknownError 未知错误，没有捕获到错误信息的情况下进行兜底
-func unknownError(ctx context.Context) error {
-	return StandError(ctx, "UnknownError", "no detail")
+	return CodeErrorTranslate(ctx, -1, message, ext)
 }
 
 // fixFrameError 补全框架的gcode自带错误码信息
 func fixFrameError(ctx context.Context, code int, message string, ext ...interface{}) error {
-	return codeErrorTranslate(ctx, code, message, ext)
+	return CodeErrorTranslate(ctx, code, message, ext)
 }
