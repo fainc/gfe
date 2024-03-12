@@ -10,16 +10,18 @@ import (
 	"github.com/gogf/gf/v2/i18n/gi18n"
 )
 
-// CustomRes 自定义返回数据标注，使用该类型数据返回时，全局后置中间件ResponseHandler将不再处理返回数据，请自行提前输出
+// CustomRes The mime is "custom" and the response middleware will return the original data.
 type CustomRes struct {
-	g.Meta `mime:"custom" sm:"自定义数据返回" dc:"本接口使用自定义数据返回，非OPEN API v3规范，具体返回数据字段请联系管理员获取"`
+	g.Meta `mime:"custom" sm:"custom response data" dc:"The API returns custom data, please contact the developer for details"`
 }
 
-// EmptyRes 空数据
+// EmptyRes The API returns empty data.
 type EmptyRes struct {
-	g.Meta `sm:"空数据返回" dc:"本接口返回空数据"`
+	g.Meta `sm:"empty response data" dc:"The API returns empty data"`
 }
 
+// CodeError
+// Code must be -1(StandError), 401(UnAuthorizedError), or >=1000(CustomCodeError), otherwise a 500 InternalError will result.
 func CodeError(code int, message string, ext ...interface{}) error {
 	var detail interface{}
 	if len(ext) != 0 {
@@ -28,33 +30,35 @@ func CodeError(code int, message string, ext ...interface{}) error {
 	return gerror.NewCode(gcode.New(code, message, detail))
 }
 
+// CodeErrorTranslate returns an error with i18n message.
+// Code must be -1(StandError), 401(UnAuthorizedError), or >=1000(CustomCodeError), otherwise a 500 InternalError will result.
 func CodeErrorTranslate(ctx context.Context, code int, message string, ext ...interface{}) error {
 	message = gi18n.T(ctx, message)
 	return CodeError(code, message, ext...)
 }
 
-// CodeErrorTranslateFormat 返回带错误码和模板格式化翻译信息的错误
+// CodeErrorTranslateFormat returns an error with i18n format message.
 func CodeErrorTranslateFormat(ctx context.Context, code int, format string, values ...interface{}) error {
 	message := gi18n.Tf(ctx, format, values)
 	return CodeError(code, message)
 }
 
-// UnAuthorizedError 未授权错误 401
+// UnAuthorizedError returns 401 code error.
 func UnAuthorizedError(ctx context.Context, ext ...interface{}) error {
 	return CodeErrorTranslate(ctx, 401, "Unauthorized", ext)
 }
 
-// SignatureError 签名错误 402
+// SignatureError returns 402 code error.
 func SignatureError(ctx context.Context, ext ...interface{}) error {
 	return CodeErrorTranslate(ctx, 402, "SignatureError", ext)
 }
 
-// InternalError 服务器内部错误
+// InternalError returns 500 code error.
 func InternalError(ctx context.Context, ext ...interface{}) error {
 	return CodeErrorTranslate(ctx, 500, http.StatusText(http.StatusInternalServerError), ext)
 }
 
-// StandError 常规错误，最常用，返回一个统一code为-1的错误，支持多错误列表输出
+// StandError returns -1 code error.
 func StandError(ctx context.Context, message string, ext ...interface{}) error {
 	return CodeErrorTranslate(ctx, -1, message, ext)
 }

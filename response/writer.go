@@ -33,35 +33,36 @@ type resultFormat struct {
 	Message string      `json:"message"` // error message
 }
 
+// Success write formatted data with 200 http status code.
 func (rec *format) Success(ctx context.Context, data interface{}) {
-	rec.writer(ctx, 200, nil, data)
+	rec.write(ctx, 200, nil, data)
 }
 
-// StandardError  业务级标准错误输出
+// StandardError  write formatted data with 200 http status code.
 func (rec *format) StandardError(ctx context.Context, err error) {
-	rec.writer(ctx, 200, err, nil)
+	rec.write(ctx, 200, err, nil)
 }
 
-// InternalError  服务器级错误
+// InternalError  write formatted data with 500 http status code.
 func (rec *format) InternalError(ctx context.Context, err error) {
-	rec.writer(ctx, 500, err, nil)
+	rec.write(ctx, 500, err, nil)
 }
 
-// SyncHTTPCodeError 同步http状态码错误输出,不建议错误处理单独调用该方法输出（直接输出错误不会被日志系统捕获），最佳实践是通过 r.SetError 统一处理。
+// SyncHTTPCodeError write formatted data with http status code.
 func (rec *format) SyncHTTPCodeError(ctx context.Context, err error) {
 	e := gerror.Code(err)
-	rec.writer(ctx, e.Code(), err, nil)
+	rec.write(ctx, e.Code(), err, nil)
 }
 
-// Writer 标准格式数据输出
-func (rec *format) writer(ctx context.Context, statusCode int, error error, data interface{}) {
+// Write formatted data, support json, xml, and msgPack.
+func (rec *format) write(ctx context.Context, statusCode int, err error, data interface{}) {
 	result := resultFormat{
 		Data: data,
 	}
-	if error != nil {
-		ge := gerror.Code(error)
-		result.Code = ge.Code()
-		result.Message = error.Error()
+	if err != nil {
+		ge := gerror.Code(err)
+		result.Code = ge.Code()      // get error code or -1
+		result.Message = err.Error() // get error message
 	}
 	r := g.RequestFromCtx(ctx)
 	r.Response.WriteStatus(statusCode) // use http 200
@@ -71,9 +72,9 @@ func (rec *format) writer(ctx context.Context, statusCode int, error error, data
 		r.Response.WriteXml(result, "xml")
 		r.Response.Header().Set("Content-Type", "application/xml; charset=utf-8") // Overwrite the default XML content type "text/xml" in GF with "application/xml".
 	case FormatMsgPack:
-		b, err := msgpack.Marshal(result)
-		if err != nil {
-			panic(err) // todo test panic
+		b, marshalError := msgpack.Marshal(result)
+		if marshalError != nil {
+			panic(marshalError) // todo test panic
 		}
 		r.Response.Write(b)
 		r.Response.Header().Set("Content-Type", "application/x-msgpack; charset=utf-8") // Set custom content type "application/x-msgpack".
