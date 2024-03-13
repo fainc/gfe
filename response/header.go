@@ -27,7 +27,7 @@ func SetDefaultResponseHeader(r *ghttp.Request) {
 		r.Server.SetServerAgent("Unknown") // Overwrite the default server agent "GoFrame HTTP Server".
 	}
 	r.Response.Header().Set("Server-Id", serverId)
-	r.Response.Header().Set("Server-RunTime", gconv.String(gtime.Now().TimestampMilli()-r.EnterTime)) // request runtime : ms
+	r.Response.Header().Set("Server-Timing", gconv.String(gtime.Now().TimestampMilli()-r.EnterTime)) // request timing(ms)
 }
 
 func getMacAddressStr() (mac string) {
