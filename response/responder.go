@@ -22,11 +22,15 @@ const (
 	FormatMsgPack = "msgPack" // MessagePack https://msgpack.org
 )
 
-type resultFormat struct {
+type errorFormat struct {
 	Code    int         `json:"code"`
-	Data    interface{} `json:"data"`
 	Message string      `json:"message"`
 	Detail  interface{} `json:"detail"`
+}
+type resultFormat struct {
+	IsSuccess bool         `json:"ok"`
+	Response  interface{}  `json:"response,omitempty"`
+	Error     *errorFormat `json:"error,omitempty"`
 }
 
 type responder struct {
@@ -72,7 +76,7 @@ func (rec *responder) Middleware(r *ghttp.Request) {
 		// Allowed error code range. The http.StatusUnauthorized 401 is special.
 		isAllow := code.Code() == -1 || code.Code() >= 1000 || code.Code() == gcode.CodeValidationFailed.Code()
 		if isAllow {
-			rec.Write(ctx, format, http.StatusBadRequest, nil, err)
+			rec.Write(ctx, format, http.StatusOK, nil, err)
 			return
 		}
 		if http.StatusText(code.Code()) != "" {
@@ -83,7 +87,7 @@ func (rec *responder) Middleware(r *ghttp.Request) {
 		return
 	}
 	if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
-		responseError := CodeError(gcode.CodeNotFound.Code(), http.StatusText(r.Response.Status), r.RequestURI)
+		responseError := CodeError(r.Response.Status, http.StatusText(r.Response.Status), r.RequestURI)
 		rec.Write(ctx, format, r.Response.Status, nil, responseError)
 		r.SetError(responseError) // Set an error for the next middleware, e.g. logs.
 		return
@@ -94,15 +98,17 @@ func (rec *responder) Middleware(r *ghttp.Request) {
 // Write formatted data, support json, xml, and msgPack.
 func (rec *responder) Write(ctx context.Context, format string, statusCode int, data interface{}, err error) {
 	result := resultFormat{
-		Data:    data,
-		Message: "OK",
-		Code:    200,
+		Response:  data,
+		IsSuccess: true,
 	}
 	if err != nil {
 		ge := gerror.Code(err)
-		result.Code = ge.Code()      // get error code or -1
-		result.Message = err.Error() // get error message
-		result.Detail = ge.Detail()
+		result.IsSuccess = false
+		result.Error = &errorFormat{
+			Code:    ge.Code(),
+			Message: err.Error(),
+			Detail:  ge.Detail(),
+		}
 	}
 	r := g.RequestFromCtx(ctx)
 	r.Response.WriteStatus(statusCode) // use http 200
