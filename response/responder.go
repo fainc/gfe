@@ -2,6 +2,7 @@ package response
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -23,14 +24,14 @@ const (
 )
 
 type errorFormat struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Detail  interface{} `json:"detail"`
+	Code    int         `json:"code" msgpack:"code"`
+	Message string      `json:"message" msgpack:"message"`
+	Detail  interface{} `json:"detail" msgpack:"detail"`
 }
 type resultFormat struct {
-	IsSuccess bool         `json:"ok"`
-	Response  interface{}  `json:"response,omitempty"`
-	Error     *errorFormat `json:"error,omitempty"`
+	Ok      bool         `json:"ok" msgpack:"ok"`
+	Payload interface{}  `json:"payload,omitempty" msgpack:"payload,omitempty"`
+	Error   *errorFormat `json:"error,omitempty" msgpack:"error,omitempty"`
 }
 
 type responder struct {
@@ -50,22 +51,20 @@ func NewResponder(formatOptions ...string) *responder {
 
 // Middleware of response.
 func (rec *responder) Middleware(r *ghttp.Request) {
-	r.Middleware.Next() // after middleware
+	r.Middleware.Next()
 	var (
-		ctx    = r.Context()
-		err    = r.GetError()
-		res    = r.GetHandlerResponse()
-		code   = gerror.Code(err)
-		format = gmeta.Get(res, "format").String()
+		ctx        = r.Context()
+		err        = r.GetError()
+		res        = r.GetHandlerResponse()
+		code       = gerror.Code(err)
+		metaCustom = gmeta.Get(res, "format").String() == FormatCustom
 	)
-	if format == "" {
-		format = rec.defaultFormat // set default format
-	}
-	if format == FormatCustom {
+	format := rec.defaultFormat
+	if format == FormatCustom || metaCustom {
 		SetDefaultResponseHeader(r)
 		return
 	}
-	// special
+	// Special content, it then exits current handler.
 	if r.IsExited() ||
 		gstr.Contains(r.RequestURI, "api.json") ||
 		gstr.Contains(r.RequestURI, "/debug/pprof/") ||
@@ -73,17 +72,13 @@ func (rec *responder) Middleware(r *ghttp.Request) {
 		return
 	}
 	if err != nil {
-		// Allowed error code range. The http.StatusUnauthorized 401 is special.
-		isAllow := code.Code() == -1 || code.Code() >= 1000 || code.Code() == gcode.CodeValidationFailed.Code()
-		if isAllow {
+		// Normal error code. The CodeValidationFailed 51 is special.
+		if code.Code() == -1 || code.Code() >= 1000 || code.Code() == gcode.CodeValidationFailed.Code() || code.Code() >= 400 && code.Code() < 500 {
 			rec.Write(ctx, format, http.StatusOK, nil, err)
 			return
 		}
-		if http.StatusText(code.Code()) != "" {
-			rec.Write(ctx, format, code.Code(), nil, CodeError(code.Code(), http.StatusText(code.Code()), r.RequestURI))
-		}
-		// Not allowed error code, writes http 500 InternalError and removes error details.
-		rec.Write(ctx, format, http.StatusInternalServerError, nil, InternalError(ctx))
+		// Other unexpected error code, writes http 500 InternalError and removes error details.
+		rec.Write(ctx, format, http.StatusInternalServerError, nil, CodeError(500, "InternalServerError", fmt.Sprintf("Unexpected Error Code %v", code.Code())))
 		return
 	}
 	if r.Response.Status > 0 && r.Response.Status != http.StatusOK {
@@ -96,20 +91,8 @@ func (rec *responder) Middleware(r *ghttp.Request) {
 }
 
 // Write formatted data, support json, xml, and msgPack.
-func (rec *responder) Write(ctx context.Context, format string, statusCode int, data interface{}, err error) {
-	result := resultFormat{
-		Response:  data,
-		IsSuccess: true,
-	}
-	if err != nil {
-		ge := gerror.Code(err)
-		result.IsSuccess = false
-		result.Error = &errorFormat{
-			Code:    ge.Code(),
-			Message: err.Error(),
-			Detail:  ge.Detail(),
-		}
-	}
+func (rec *responder) Write(ctx context.Context, format string, statusCode int, payload interface{}, err error) {
+	result := rec.makeResult(payload, err)
 	r := g.RequestFromCtx(ctx)
 	r.Response.WriteStatus(statusCode) // use http 200
 	r.Response.ClearBuffer()
@@ -118,10 +101,7 @@ func (rec *responder) Write(ctx context.Context, format string, statusCode int, 
 		r.Response.WriteXml(result, "xml")
 		r.Response.Header().Set("Content-Type", "application/xml; charset=utf-8") // Overwrite the default XML content type "text/xml" in GF with "application/xml".
 	case FormatMsgPack:
-		b, marshalError := msgpack.Marshal(result)
-		if marshalError != nil {
-			panic(marshalError) // todo test panic
-		}
+		b, _ := msgpack.Marshal(result)
 		r.Response.Write(b)
 		r.Response.Header().Set("Content-Type", "application/x-msgpack; charset=utf-8") // Set custom content type "application/x-msgpack".
 	default:
@@ -130,4 +110,25 @@ func (rec *responder) Write(ctx context.Context, format string, statusCode int, 
 	}
 	SetDefaultResponseHeader(r)
 	r.ExitAll() // r.IsExited() will return a true value in the next middleware.
+}
+
+func (rec *responder) makeResult(payload interface{}, err error) (result *resultFormat) {
+	result = &resultFormat{}
+	if err != nil {
+		ge := gerror.Code(err)
+		result.Ok = false
+		e := &errorFormat{
+			Code:    ge.Code(),
+			Message: err.Error(),
+			Detail:  ge.Detail(),
+		}
+		if e.Detail == nil || e.Detail == "" {
+			e.Detail = []int{}
+		}
+		result.Error = e
+	} else {
+		result.Payload = payload
+		result.Ok = true
+	}
+	return
 }

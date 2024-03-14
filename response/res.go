@@ -10,9 +10,9 @@ import (
 	"github.com/gogf/gf/v2/i18n/gi18n"
 )
 
-// CustomRes The mime is "custom" and the response middleware will return the original data.
+// CustomRes The format is "custom" and the response middleware will return the original data.
 type CustomRes struct {
-	g.Meta `mime:"custom" sm:"custom response data" dc:"The API returns custom data, please contact the developer for details"`
+	g.Meta `format:"custom" sm:"custom response data" dc:"The API returns custom data, please contact the developer for details"`
 }
 
 // EmptyRes The API returns empty data.
@@ -21,7 +21,7 @@ type EmptyRes struct {
 }
 
 // CodeError
-// Code must be -1(StandError), 401(UnAuthorizedError) or >=1000(CustomCodeError), otherwise the response middleware will output a 500 InternalError.
+// Code must be -1(StandError), >=1000(CustomCodeError) or in the range 400 to 499(Special Error such as 401 UnAuthorizedError), otherwise the response middleware will output a 500 InternalError.
 func CodeError(code int, message string, detail ...interface{}) error {
 	return gerror.NewCode(gcode.New(code, message, getDetailValue(detail...)))
 }
@@ -50,8 +50,8 @@ func SignatureError(ctx context.Context, detail ...interface{}) error {
 }
 
 // InternalError returns 500 code error. Used by server error.
-func InternalError(ctx context.Context, detail ...interface{}) error {
-	return CodeErrorTranslate(ctx, 500, http.StatusText(http.StatusInternalServerError), detail...)
+func InternalError(detail ...interface{}) error {
+	return CodeError(500, http.StatusText(500), detail...)
 }
 
 // StandError returns -1 code error.
