@@ -8,7 +8,7 @@ import (
 
 // DefaultMiddlewareRegister 常用全局默认中间件统一注册
 func DefaultMiddlewareRegister(s *ghttp.Server, defaultMime string) {
-	s.BindMiddlewareDefault(CORSDefaultRegister, MultiLangRegister, Logger().Register, response.NewResponder(defaultMime).Middleware)
+	s.BindMiddlewareDefault(CORSDefaultRegister, MultiLangRegister, Logger().Register, response.NewResponder(response.Options{Format: defaultMime}).Middleware)
 }
 
 // GroupDefaultMiddlewareRegister  常用组默认中间件统一注册
@@ -17,5 +17,5 @@ func GroupDefaultMiddlewareRegister(group *ghttp.RouterGroup, options ...string)
 	if len(options) >= 1 {
 		defaultMime = options[0]
 	}
-	group.Middleware(CORSDefaultRegister, MultiLangRegister, Logger().Register, response.NewResponder(defaultMime).Middleware)
+	group.Middleware(CORSDefaultRegister, MultiLangRegister, Logger().Register, response.NewResponder(response.Options{Format: defaultMime}).Middleware)
 }
