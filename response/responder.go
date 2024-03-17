@@ -37,10 +37,11 @@ type v2resultFormat struct {
 	Error     *errorFormat `json:"error,omitempty" msgpack:"error,omitempty"`
 	Encrypted bool         `json:"encrypted,omitempty" msgpack:"encrypted,omitempty"`
 }
+type encryptFunc func(payload interface{}) (result interface{}, encrypted bool)
 type responder struct {
 	defaultFormat string
 	version       int
-	encryptFunc   func(payload interface{}) (result interface{}, encrypted bool)
+	encryptFunc   encryptFunc
 }
 
 type Options struct {
@@ -51,10 +52,7 @@ type Options struct {
 // NewResponder returns a responder to bind middleware.
 // Options.Format supports json / xml / msgPack / custom.
 // Options.Version supports 1 or 2. Default is 2.
-// V2 demo: V2FormatSuccessDemo, V2FormatErrorDemo.
-// Version 1 demo: V1FormatSuccessDemo, V1FormatErrorDemo.
-// The encryptFunc receives the raw payload and returns the encrypted payload and encryption status(encrypted or not).
-func NewResponder(opts Options, encryptFunc ...func(payload interface{}) (result interface{}, encrypted bool)) *responder {
+func NewResponder(opts Options, encryptFunc ...encryptFunc) *responder {
 	v := 2
 	if opts.Version == 1 {
 		v = 1
