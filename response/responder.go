@@ -68,14 +68,16 @@ func NewResponder(opts Options, encryptFunc ...encryptFunc) *responder {
 func (rec *responder) Middleware(r *ghttp.Request) {
 	r.Middleware.Next()
 	var (
-		ctx        = r.Context()
-		err        = r.GetError()
-		res        = r.GetHandlerResponse()
-		code       = gerror.Code(err)
-		metaCustom = gmeta.Get(res, "format").String() == FormatCustom
+		ctx    = r.Context()
+		err    = r.GetError()
+		res    = r.GetHandlerResponse()
+		code   = gerror.Code(err)
+		format = gmeta.Get(res, "format").String()
 	)
-	format := rec.defaultFormat
-	if format == FormatCustom || metaCustom {
+	if format == "" {
+		format = rec.defaultFormat
+	}
+	if format == FormatCustom {
 		SetDefaultResponseHeader(r)
 		return
 	}
