@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/fainc/go-crypto v0.0.7
 	github.com/fainc/gojwt v1.0.2
-	github.com/gogf/gf/v2 v2.6.3
+	github.com/gogf/gf/v2 v2.6.4
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 )
