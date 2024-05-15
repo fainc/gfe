@@ -69,8 +69,8 @@ func (rec *logger) Register(r *ghttp.Request) {
 		ua := r.GetHeader("User-Agent")
 		bd := r.GetBodyString()
 		cip := r.GetClientIp()
-		ets := gtime.NewFromTimeStamp(r.EnterTime).String()
-		rt := gtime.Now().TimestampMilli() - r.EnterTime
+		ets := r.EnterTime.String()
+		rt := gtime.Now().Sub(r.EnterTime).Milliseconds()
 		buffer := r.Response.BufferString()
 		if rec.AccessMaxLimit >= 1 && r.Request.ContentLength > rec.AccessMaxLimit {
 			bd = "body bytes exceed the limit"

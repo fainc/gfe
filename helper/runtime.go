@@ -19,7 +19,7 @@ func RunTime() *runTime {
 // GetRequestRunTime 获取请求进入框架后的实时运行时间
 func (rec *runTime) GetRequestRunTime(ctx context.Context) int64 {
 	r := g.RequestFromCtx(ctx)
-	return gtime.Now().TimestampMilli() - r.EnterTime
+	return gtime.Now().Sub(r.EnterTime).Milliseconds()
 }
 
 // Start 开始计算
