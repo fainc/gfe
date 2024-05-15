@@ -16,6 +16,8 @@ func CtxUser() *ctxUser {
 
 type CtxUserInfo struct {
 	UID         int64
+	UUID        string
+	TenantID    int64
 	JTI         string
 	Exp         time.Time
 	RegIP       string
@@ -32,6 +34,8 @@ func (rec *ctxUser) Get(ctx context.Context) CtxUserInfo {
 	}
 	return CtxUserInfo{
 		UID:         r.GetCtxVar("TOKEN_UID").Int64(),
+		UUID:        r.GetCtxVar("TOKEN_UUID").String(),
+		TenantID:    r.GetCtxVar("TOKEN_TENANT_ID").Int64(),
 		JTI:         r.GetCtxVar("TOKEN_JTI").String(),
 		Exp:         r.GetCtxVar("TOKEN_EXP").Time(),
 		RegIP:       r.GetCtxVar("TOKEN_REG_IP").String(),
@@ -48,6 +52,8 @@ func (rec *ctxUser) Set(ctx context.Context, u CtxUserInfo) {
 		panic("get request from ctx failed")
 	}
 	r.SetCtxVar("TOKEN_UID", u.UID)
+	r.SetCtxVar("TOKEN_UUID", u.UUID)
+	r.SetCtxVar("TOKEN_TENANT_ID", u.TenantID)
 	r.SetCtxVar("TOKEN_JTI", u.JTI)
 	r.SetCtxVar("TOKEN_EXP", u.Exp)
 	r.SetCtxVar("TOKEN_REG_IP", u.RegIP)
