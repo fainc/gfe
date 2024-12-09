@@ -56,13 +56,14 @@ func (rec *jwt) Register(r *ghttp.Request) {
 		helper.CtxUser().Set(r.Context(), helper.CtxUserInfo{
 			UID:         tk.UID,
 			UUID:        tk.UUID,
-			TenantID:    0, // todo add gojwt TenantID
+			TenantID:    tk.Ext["tenantID"].(int64), // todo update tenantID
 			JTI:         tk.ID,
 			Exp:         tk.ExpiresAt.Time,
 			RegIP:       tk.RegIP,
 			RegUA:       tk.RegUA,
 			RegDeviceID: tk.RegDeviceID,
 			Ext:         tk.Ext,
+			Subject:     rec.i.Cfg.Subject,
 		})
 	}
 	r.Middleware.Next()

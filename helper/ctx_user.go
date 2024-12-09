@@ -23,6 +23,7 @@ type CtxUserInfo struct {
 	RegIP       string
 	RegUA       string
 	RegDeviceID string
+	Subject     string
 	Ext         g.Map
 }
 
@@ -42,6 +43,7 @@ func (rec *ctxUser) Get(ctx context.Context) CtxUserInfo {
 		RegUA:       r.GetCtxVar("TOKEN_REG_UA").String(),
 		RegDeviceID: r.GetCtxVar("TOKEN_REG_DEVICE_ID").String(),
 		Ext:         r.GetCtxVar("TOKEN_EXT").Map(),
+		Subject:     r.GetCtxVar("TOKEN_SUBJECT").String(),
 	}
 }
 
@@ -54,6 +56,7 @@ func (rec *ctxUser) Set(ctx context.Context, u CtxUserInfo) {
 	r.SetCtxVar("TOKEN_UID", u.UID)
 	r.SetCtxVar("TOKEN_UUID", u.UUID)
 	r.SetCtxVar("TOKEN_TENANT_ID", u.TenantID)
+	r.SetCtxVar("TOKEN_SUBJECT", u.Subject)
 	r.SetCtxVar("TOKEN_JTI", u.JTI)
 	r.SetCtxVar("TOKEN_EXP", u.Exp)
 	r.SetCtxVar("TOKEN_REG_IP", u.RegIP)
