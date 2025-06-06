@@ -104,7 +104,7 @@ func (rec *responder) Write(ctx context.Context, statusCode int, payload interfa
 	case FormatMsgPack:
 		marshal, _ := msgpack.Marshal(result)
 		r.Response.Write(marshal)
-		r.Response.Header().Set("Content-Type", "application/x-msgpack; charset=utf-8")
+		r.Response.Header().Set("Content-Type", "application/x-msgpack")
 	default:
 		r.Response.WriteJson(result)
 		r.Response.Header().Set("Content-Type", "application/json; charset=utf-8")
