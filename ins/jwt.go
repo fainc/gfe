@@ -88,20 +88,19 @@ func (rec *JwtIns) ParseRaw(token string) (claims jwt.MapClaims, err error) {
 }
 
 // Publish Token签发
-func (rec *JwtIns) Publish(ctx context.Context, uid int64, audience []string, ext map[string]interface{}, duration time.Duration) (tk, jti string, err error) {
+func (rec *JwtIns) Publish(ctx context.Context, uid int64, uuid string, tenantId int64, audience []string, ext map[string]interface{}, duration time.Duration) (tk, jti string, err error) {
 	r := g.RequestFromCtx(ctx)
-	if err != nil {
-		return
-	}
 	tk, jti, err = rec.client.Publish(&gojwt.IssueParams{
 		Subject:  rec.Cfg.Subject,
 		Audience: audience,
 		Duration: duration,
 		PayloadClaims: gojwt.PayloadClaims{
-			UID:   uid,
-			RegIP: r.GetClientIp(),
-			RegUA: gmd5.MustEncrypt(r.Request.UserAgent()),
-			Ext:   ext,
+			UID:      uid,
+			UUID:     uuid,
+			TenantId: tenantId,
+			RegIP:    r.GetClientIp(),
+			RegUA:    gmd5.MustEncrypt(r.Request.UserAgent()),
+			Ext:      ext,
 		},
 	})
 	return

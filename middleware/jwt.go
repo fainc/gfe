@@ -54,9 +54,9 @@ func (rec *jwt) Register(r *ghttp.Request) {
 	}
 	if err == nil && tk != nil {
 		helper.CtxUser().Set(r.Context(), helper.CtxUserInfo{
-			UID:  tk.UID,
-			UUID: tk.UUID,
-			//TenantID:    tk.Ext["tenantID"].(int64), // todo update tenantID
+			UID:         tk.UID,
+			UUID:        tk.UUID,
+			TenantID:    tk.TenantId,
 			JTI:         tk.ID,
 			Exp:         tk.ExpiresAt.Time,
 			RegIP:       tk.RegIP,
